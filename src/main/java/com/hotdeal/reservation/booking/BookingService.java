@@ -23,6 +23,7 @@ public class BookingService {
         Product product = entityUtils.getEntity(request.productId(), Product.class);
         User user = entityUtils.getEntity(userId, User.class);
 
+        product.decreaseStock();
         paymentService.pay(user, request.paymentMethods(), product.getPrice());
 
         Booking booking = bookingRepository.save(new Booking(userId, product.getId()));
