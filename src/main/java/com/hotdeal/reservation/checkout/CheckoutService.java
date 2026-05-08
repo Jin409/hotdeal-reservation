@@ -1,9 +1,8 @@
 package com.hotdeal.reservation.checkout;
 
+import com.hotdeal.reservation.common.EntityUtils;
 import com.hotdeal.reservation.product.Product;
-import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.user.User;
-import com.hotdeal.reservation.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,15 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CheckoutService {
 
-    private final ProductRepository productRepository;
-    private final UserRepository userRepository;
+    private final EntityUtils entityUtils;
 
     public CheckoutResponse checkout(Long productId, Long userId) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        Product product = entityUtils.getEntity(productId, Product.class);
+        User user = entityUtils.getEntity(userId, User.class);
 
         return new CheckoutResponse(
                 product.getName(),
