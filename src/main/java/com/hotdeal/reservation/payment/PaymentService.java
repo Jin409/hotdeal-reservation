@@ -33,12 +33,12 @@ public class PaymentService {
     }
 
     private void execute(User user, PaymentMethodRequest pm) {
-        PaymentType type = PaymentType.valueOf(pm.getType());
+        PaymentType type = PaymentType.valueOf(pm.type());
         PaymentProcessor processor = processorFactory.getProcessor(type);
-        processor.process(user, pm.getAmount());
+        processor.process(user, pm.amount());
     }
 
     private boolean isPoint(PaymentMethodRequest pm) {
-        return PaymentType.valueOf(pm.getType()) == PaymentType.YPOINT;
+        return PaymentType.valueOf(pm.type()) == PaymentType.YPOINT;
     }
 }

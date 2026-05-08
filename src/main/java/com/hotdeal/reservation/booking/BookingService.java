@@ -27,11 +27,11 @@ public class BookingService {
 
     @Transactional
     public BookingResponse book(Long userId, BookingRequest request) {
-        Product product = entityUtils.getEntity(request.getProductId(), Product.class);
+        Product product = entityUtils.getEntity(request.productId(), Product.class);
         User user = entityUtils.getEntity(userId, User.class);
 
-        validatePaymentRequest(request.getPaymentMethods(), product.getPrice(), user);
-        paymentService.pay(user, request.getPaymentMethods());
+        validatePaymentRequest(request.paymentMethods(), product.getPrice(), user);
+        paymentService.pay(user, request.paymentMethods());
 
         Booking booking = bookingRepository.save(new Booking(userId, product.getId()));
 
@@ -45,7 +45,7 @@ public class BookingService {
     }
 
     private void validatePaymentCombination(List<PaymentMethodRequest> paymentMethods) {
-        Set<PaymentType> types = paymentMethods.stream().map(pm -> PaymentType.valueOf(pm.getType()))
+        Set<PaymentType> types = paymentMethods.stream().map(pm -> PaymentType.valueOf(pm.type()))
                 .collect(Collectors.toSet());
 
         if (types.contains(PaymentType.CREDIT_CARD) && types.contains(PaymentType.YPAY)) {
@@ -54,7 +54,7 @@ public class BookingService {
     }
 
     private void validateTotalAmountMatchesPrice(List<PaymentMethodRequest> paymentMethods, int productPrice) {
-        int totalAmount = paymentMethods.stream().mapToInt(PaymentMethodRequest::getAmount).sum();
+        int totalAmount = paymentMethods.stream().mapToInt(PaymentMethodRequest::amount).sum();
 
         if (totalAmount != productPrice) {
             throw new BadRequestException("총 결제금액이 상품 가격과 일치하지 않습니다.");
@@ -69,7 +69,7 @@ public class BookingService {
     }
 
     private int calculatePointToUse(List<PaymentMethodRequest> paymentMethods) {
-        return paymentMethods.stream().filter(pm -> PaymentType.valueOf(pm.getType()) == PaymentType.YPOINT)
-                .mapToInt(PaymentMethodRequest::getAmount).sum();
+        return paymentMethods.stream().filter(pm -> PaymentType.valueOf(pm.type()) == PaymentType.YPOINT)
+                .mapToInt(PaymentMethodRequest::amount).sum();
     }
 }

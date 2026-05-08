@@ -46,9 +46,9 @@ class CheckoutServiceTest {
         CheckoutResponse response = checkoutService.checkout(product.getId(), user.getId());
 
         assertAll(
-                () -> assertThat(response.getProductName()).isEqualTo("제주 호텔"),
-                () -> assertThat(response.getPrice()).isEqualTo(100000),
-                () -> assertThat(response.getPointBalance()).isEqualTo(50000L)
+                () -> assertThat(response.productName()).isEqualTo("제주 호텔"),
+                () -> assertThat(response.price()).isEqualTo(100000),
+                () -> assertThat(response.pointBalance()).isEqualTo(50000L)
         );
     }
 
