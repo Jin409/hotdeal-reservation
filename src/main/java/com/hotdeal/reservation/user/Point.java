@@ -21,11 +21,11 @@ public class Point {
         this.balance = balance;
     }
 
-    public boolean hasEnough(int amount) {
+    public boolean hasEnough(long amount) {
         return this.balance >= amount;
     }
 
-    public Point use(int amount) {
+    public Point use(long amount) {
         if (!hasEnough(amount)) {
             throw new IllegalStateException("포인트가 부족합니다.");
         }

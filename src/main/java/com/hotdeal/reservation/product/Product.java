@@ -21,10 +21,10 @@ public class Product {
     private String name;
 
     @Column(nullable = false)
-    private int price;
+    private long price;
 
-    @Column(nullable = false)
-    private int stock;
+    @Embedded
+    private Stock stock;
 
     @Column(nullable = false)
     private LocalDateTime checkInAt;
@@ -35,12 +35,16 @@ public class Product {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public Product(String name, int price, int stock, LocalDateTime checkInAt, LocalDateTime checkOutAt) {
+    public Product(String name, long price, int stock, LocalDateTime checkInAt, LocalDateTime checkOutAt) {
         this.name = name;
         this.price = price;
-        this.stock = stock;
+        this.stock = new Stock(stock);
         this.checkInAt = checkInAt;
         this.checkOutAt = checkOutAt;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public void decreaseStock() {
+        this.stock = stock.decrease();
     }
 }

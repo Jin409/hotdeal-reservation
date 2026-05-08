@@ -23,9 +23,9 @@ public class PaymentItem {
     private PaymentType paymentType;
 
     @Column(nullable = false)
-    private int amount;
+    private long amount;
 
-    public PaymentItem(Long paymentId, PaymentType paymentType, int amount) {
+    public PaymentItem(Long paymentId, PaymentType paymentType, long amount) {
         this.paymentId = paymentId;
         this.paymentType = paymentType;
         this.amount = amount;

@@ -5,7 +5,7 @@ import com.hotdeal.reservation.user.User;
 
 public interface PaymentProcessor {
 
-    void process(User user, int amount);
+    void process(User user, long amount);
 
     PaymentType supportedType();
 }

@@ -18,7 +18,7 @@ public class PaymentService {
 
     private final PaymentProcessorFactory processorFactory;
 
-    public void pay(User user, List<PaymentMethodRequest> paymentMethods, int productPrice) {
+    public void pay(User user, List<PaymentMethodRequest> paymentMethods, long productPrice) {
         validatePaymentCombination(paymentMethods);
         validateTotalAmountMatchesPrice(paymentMethods, productPrice);
         validateHasEnoughPoint(paymentMethods, user);
@@ -37,8 +37,8 @@ public class PaymentService {
         }
     }
 
-    private void validateTotalAmountMatchesPrice(List<PaymentMethodRequest> paymentMethods, int productPrice) {
-        int totalAmount = paymentMethods.stream().mapToInt(PaymentMethodRequest::amount).sum();
+    private void validateTotalAmountMatchesPrice(List<PaymentMethodRequest> paymentMethods, long productPrice) {
+        long totalAmount = paymentMethods.stream().mapToLong(PaymentMethodRequest::amount).sum();
 
         if (totalAmount != productPrice) {
             throw new BadRequestException("총 결제금액이 상품 가격과 일치하지 않습니다.");
@@ -46,7 +46,7 @@ public class PaymentService {
     }
 
     private void validateHasEnoughPoint(List<PaymentMethodRequest> paymentMethods, User user) {
-        int pointAmount = calculatePointToUse(paymentMethods);
+        long pointAmount = calculatePointToUse(paymentMethods);
         if (!user.getPoint().hasEnough(pointAmount)) {
             throw new BadRequestException("포인트 잔액이 부족합니다.");
         }
@@ -74,10 +74,10 @@ public class PaymentService {
         return PaymentType.valueOf(pm.type()) == PaymentType.YPOINT;
     }
 
-    private int calculatePointToUse(List<PaymentMethodRequest> paymentMethods) {
+    private long calculatePointToUse(List<PaymentMethodRequest> paymentMethods) {
         return paymentMethods.stream()
                 .filter(this::isPoint)
-                .mapToInt(PaymentMethodRequest::amount)
+                .mapToLong(PaymentMethodRequest::amount)
                 .sum();
     }
 }

@@ -30,10 +30,14 @@ public class Booking {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public Booking(Long userId, Long productId) {
+    public static Booking confirmed(Long userId, Long productId) {
+        return new Booking(userId, productId, BookingStatus.CONFIRMED);
+    }
+
+    private Booking(Long userId, Long productId, BookingStatus status) {
         this.userId = userId;
         this.productId = productId;
-        this.status = BookingStatus.WAITING;
+        this.status = status;
         this.createdAt = LocalDateTime.now();
     }
 }

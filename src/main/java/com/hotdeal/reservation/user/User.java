@@ -34,7 +34,7 @@ public class User {
         return point.getBalance();
     }
 
-    public void usePoints(int amount) {
+    public void usePoints(long amount) {
         this.point = point.use(amount);
     }
 }

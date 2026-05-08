@@ -72,7 +72,7 @@ class BookingAcceptanceTest {
         .then()
                 .statusCode(201)
                 .body("bookingId", notNullValue())
-                .body("status", equalTo("WAITING"));
+                .body("status", equalTo("CONFIRMED"));
     }
 
     @Test
