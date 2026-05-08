@@ -27,7 +27,7 @@ public class BookingService {
         Product product = entityUtils.getEntity(request.getProductId(), Product.class);
         User user = entityUtils.getEntity(userId, User.class);
 
-        validatePaymentRequest(request.getPaymentMethods(), product.getPrice(), user.getPointBalance());
+        validatePaymentRequest(request.getPaymentMethods(), product.getPrice(), user);
         usePoints(user, request.getPaymentMethods());
 
         Booking booking = bookingRepository.save(new Booking(userId, product.getId()));
@@ -35,11 +35,10 @@ public class BookingService {
         return new BookingResponse(booking.getId(), booking.getStatus());
     }
 
-    private void validatePaymentRequest(List<PaymentMethodRequest> paymentMethods, int productPrice,
-                                        Long pointBalance) {
+    private void validatePaymentRequest(List<PaymentMethodRequest> paymentMethods, int productPrice, User user) {
         validatePaymentCombination(paymentMethods);
         validateTotalAmountMatchesPrice(paymentMethods, productPrice);
-        validateHasEnoughPoint(paymentMethods, pointBalance);
+        validateHasEnoughPoint(paymentMethods, user);
     }
 
     private void validatePaymentCombination(List<PaymentMethodRequest> paymentMethods) {
@@ -59,9 +58,9 @@ public class BookingService {
         }
     }
 
-    private void validateHasEnoughPoint(List<PaymentMethodRequest> paymentMethods, Long pointBalance) {
+    private void validateHasEnoughPoint(List<PaymentMethodRequest> paymentMethods, User user) {
         int pointAmount = calculatePointToUse(paymentMethods);
-        if (pointAmount > pointBalance) {
+        if (!user.getPoint().hasEnough(pointAmount)) {
             throw new IllegalArgumentException("포인트 잔액이 부족합니다.");
         }
     }
