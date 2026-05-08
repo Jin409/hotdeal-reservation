@@ -5,6 +5,7 @@ import com.hotdeal.reservation.booking.dto.BookingResponse;
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.EntityUtils;
 import com.hotdeal.reservation.common.exception.BadRequestException;
+import com.hotdeal.reservation.payment.PaymentService;
 import com.hotdeal.reservation.payment.PaymentType;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.user.User;
@@ -22,6 +23,7 @@ public class BookingService {
 
     private final EntityUtils entityUtils;
     private final BookingRepository bookingRepository;
+    private final PaymentService paymentService;
 
     @Transactional
     public BookingResponse book(Long userId, BookingRequest request) {
@@ -29,7 +31,7 @@ public class BookingService {
         User user = entityUtils.getEntity(userId, User.class);
 
         validatePaymentRequest(request.getPaymentMethods(), product.getPrice(), user);
-        usePoints(user, request.getPaymentMethods());
+        paymentService.pay(user, request.getPaymentMethods());
 
         Booking booking = bookingRepository.save(new Booking(userId, product.getId()));
 
@@ -63,13 +65,6 @@ public class BookingService {
         int pointAmount = calculatePointToUse(paymentMethods);
         if (!user.getPoint().hasEnough(pointAmount)) {
             throw new BadRequestException("포인트 잔액이 부족합니다.");
-        }
-    }
-
-    private void usePoints(User user, List<PaymentMethodRequest> paymentMethods) {
-        int pointAmount = calculatePointToUse(paymentMethods);
-        if (pointAmount > 0) {
-            user.usePoints(pointAmount);
         }
     }
 
