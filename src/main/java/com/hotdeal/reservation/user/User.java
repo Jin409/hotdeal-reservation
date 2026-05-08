@@ -21,12 +21,20 @@ public class User {
     @Column(nullable = false)
     private String email;
 
-    @Column(nullable = false)
-    private Long pointBalance;
+    @Embedded
+    private Point point;
 
-    public User(String name, String email, Long pointBalance) {
+    public User(String name, String email, long pointBalance) {
         this.name = name;
         this.email = email;
-        this.pointBalance = pointBalance;
+        this.point = new Point(pointBalance);
+    }
+
+    public long getPointBalance() {
+        return point.getBalance();
+    }
+
+    public void usePoints(int amount) {
+        this.point = point.use(amount);
     }
 }

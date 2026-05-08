@@ -18,7 +18,8 @@ description: JUnit5 + Testcontainers 기반 테스트 작성 가이드. 단위(D
 
 ### 위치
 ```
-src/test/java/com/hotdeal/reservation/{domain}/domain/
+프로덕션 코드와 동일한 패키지 경로에 위치합니다.
+예: src/main/.../user/Point.java → src/test/.../user/PointTest.java
 ```
 
 ### 규칙
