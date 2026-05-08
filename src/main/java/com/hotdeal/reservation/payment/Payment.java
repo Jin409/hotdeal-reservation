@@ -21,7 +21,7 @@ public class Payment {
     private Long bookingId;
 
     @Column(nullable = false)
-    private int totalAmount;
+    private long totalAmount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -30,7 +30,7 @@ public class Payment {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public Payment(Long bookingId, int totalAmount) {
+    public Payment(Long bookingId, long totalAmount) {
         this.bookingId = bookingId;
         this.totalAmount = totalAmount;
         this.status = PaymentStatus.PENDING;

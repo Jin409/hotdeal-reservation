@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public record CheckoutResponse(
         String productName,
-        int price,
+        long price,
         LocalDateTime checkInAt,
         LocalDateTime checkOutAt,
         long pointBalance

@@ -13,7 +13,7 @@ public class CreditCardProcessor implements PaymentProcessor {
     private final PgClient pgClient;
 
     @Override
-    public void process(User user, int amount) {
+    public void process(User user, long amount) {
         pgClient.charge(amount);
     }
 

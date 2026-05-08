@@ -21,7 +21,7 @@ public class Product {
     private String name;
 
     @Column(nullable = false)
-    private int price;
+    private long price;
 
     @Embedded
     private Stock stock;
@@ -35,7 +35,7 @@ public class Product {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public Product(String name, int price, int stock, LocalDateTime checkInAt, LocalDateTime checkOutAt) {
+    public Product(String name, long price, int stock, LocalDateTime checkInAt, LocalDateTime checkOutAt) {
         this.name = name;
         this.price = price;
         this.stock = new Stock(stock);
