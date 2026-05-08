@@ -1,5 +1,5 @@
 ---
-description: JUnit5 + Testcontainers 기반 테스트 작성 가이드. 단위(Domain) / 서비스(Service) / 인수(Acceptance) 테스트 작성 시, 동시성 테스트 작성 시, Redis Fallback 테스트 작성 시 참고합니다.
+description: JUnit5 + Testcontainers 기반 테스트 작성 가이드. 단위(Domain) / 서비스(Service) / 인수(Acceptance) 테스트 작성 시, 동시성 테스트 작성 시 참고합니다.
 ---
 
 # 테스트 작성 가이드
@@ -114,20 +114,6 @@ void 동시에_100명이_요청해도_10명만_예약에_성공한다() throws I
 }
 ```
 
-### Redis Fallback 테스트 패턴
-- Redis 컨테이너를 강제 종료 후 DB 비관적 락으로 전환되는지 검증합니다.
-
-```java
-@Test
-void Redis_장애_시_DB_비관적락으로_재고를_차감한다() {
-    redis.stop();
-
-    bookingService.book(request);
-
-    assertThat(productRepository.findById(1L).getStock()).isEqualTo(9);
-}
-```
-
 ---
 
 ## 3. 인수 테스트 (Acceptance)
@@ -182,24 +168,33 @@ QueueStatusResponse pollUntilDone(Long bookingId)  // CONFIRMED or FAILED까지 
 
 ## 프로파일 설정
 
+```
+application.yml          → spring.profiles.active: local
+application-local.yml    → H2 MODE=MySQL (Docker 불필요)
+application-test.yml     → Testcontainers (실제 MySQL + Redis)
+```
+
+### 로컬 (기본)
 ```yaml
 # src/test/resources/application.yml
 spring:
-  datasource:
-    url: jdbc:h2:mem:reservation;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false
-    driver-class-name: org.h2.Driver
-    username: sa
+  profiles:
+    active: local
   jpa:
     hibernate:
       ddl-auto: create-drop
-    database-platform: org.hibernate.dialect.H2Dialect
   autoconfigure:
     exclude:
-      - org.redisson.spring.starter.RedissonAutoConfigurationV2
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
 ```
 
-단위 테스트는 이 설정으로 H2 + Redis 비활성화로 실행합니다.
-서비스/인수 테스트는 Testcontainers로 실제 MySQL + Redis를 띄워서 실행합니다.
+- 단위 테스트, contextLoads: H2 + Redis 비활성화로 Docker 없이 실행합니다.
+- 서비스/인수 테스트: `@ActiveProfiles("test")` + Testcontainers로 실제 MySQL + Redis를 띄우고 `@DynamicPropertySource`로 연결합니다.
+
+### 주의사항
+H2 MODE=MySQL이 완벽하지 않으므로 MySQL 전용 문법 사용을 금지합니다.
+```
+X ON DUPLICATE KEY UPDATE
+X DATE_FORMAT 등 MySQL 전용 함수
+```
