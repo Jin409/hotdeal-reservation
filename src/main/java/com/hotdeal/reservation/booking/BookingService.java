@@ -4,6 +4,7 @@ import com.hotdeal.reservation.booking.dto.BookingRequest;
 import com.hotdeal.reservation.booking.dto.BookingResponse;
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.EntityUtils;
+import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentType;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.user.User;
@@ -46,7 +47,7 @@ public class BookingService {
                 .collect(Collectors.toSet());
 
         if (types.contains(PaymentType.CREDIT_CARD) && types.contains(PaymentType.YPAY)) {
-            throw new IllegalArgumentException("신용카드와 Y페이는 동시에 사용할 수 없습니다.");
+            throw new BadRequestException("신용카드와 Y페이는 동시에 사용할 수 없습니다.");
         }
     }
 
@@ -54,14 +55,14 @@ public class BookingService {
         int totalAmount = paymentMethods.stream().mapToInt(PaymentMethodRequest::getAmount).sum();
 
         if (totalAmount != productPrice) {
-            throw new IllegalArgumentException("총 결제금액이 상품 가격과 일치하지 않습니다.");
+            throw new BadRequestException("총 결제금액이 상품 가격과 일치하지 않습니다.");
         }
     }
 
     private void validateHasEnoughPoint(List<PaymentMethodRequest> paymentMethods, User user) {
         int pointAmount = calculatePointToUse(paymentMethods);
         if (!user.getPoint().hasEnough(pointAmount)) {
-            throw new IllegalArgumentException("포인트 잔액이 부족합니다.");
+            throw new BadRequestException("포인트 잔액이 부족합니다.");
         }
     }
 
