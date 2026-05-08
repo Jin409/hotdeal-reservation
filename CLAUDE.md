@@ -5,9 +5,9 @@
 
 ## 기술 스택
 - Spring Boot 3.5.0 (Web, JPA, Redis, Validation, AOP)
-- Redisson (분산락)
 - MySQL 8.0, Redis 7
 - Testcontainers, RestAssured, H2 (테스트)
+- 로컬: H2 MODE=MySQL, CI: Testcontainers
 
 ## Skills
 - 테스트 작성: `skills/test.md`

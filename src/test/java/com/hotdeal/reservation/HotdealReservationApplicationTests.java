@@ -9,5 +9,4 @@ class HotdealReservationApplicationTests {
 	@Test
 	void contextLoads() {
 	}
-
 }
