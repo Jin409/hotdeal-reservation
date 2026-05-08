@@ -26,7 +26,7 @@ public class BookingService {
         product.decreaseStock();
         paymentService.pay(user, request.paymentMethods(), product.getPrice());
 
-        Booking booking = bookingRepository.save(new Booking(userId, product.getId()));
+        Booking booking = bookingRepository.save(Booking.confirmed(userId, product.getId()));
 
         return new BookingResponse(booking.getId(), booking.getStatus());
     }
