@@ -11,16 +11,16 @@ public class QueueRedisRepository {
     private final StringRedisTemplate redisTemplate;
 
     public boolean tryEnter(Long productId, Long userId) {
-        Long added = redisTemplate.opsForSet().add("queue:entered:" + productId, userId.toString());
+        Long added = redisTemplate.opsForSet().add(QueueKeys.entered(productId), userId.toString());
         return added != null && added > 0;
     }
 
     public void addToQueue(Long productId, Long userId) {
-        redisTemplate.opsForList().rightPush("queue:product:" + productId, userId.toString());
+        redisTemplate.opsForList().rightPush(QueueKeys.queue(productId), userId.toString());
     }
 
     public Long getRank(Long productId, Long userId) {
-        Long index = redisTemplate.opsForList().indexOf("queue:product:" + productId, userId.toString());
+        Long index = redisTemplate.opsForList().indexOf(QueueKeys.queue(productId), userId.toString());
         if (index == null) {
             return null;
         }
