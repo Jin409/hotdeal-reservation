@@ -1,14 +1,13 @@
 package com.hotdeal.reservation.checkout;
 
+import com.hotdeal.reservation.common.ServiceTest;
 import com.hotdeal.reservation.common.exception.NotFoundException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.LocalDateTime;
 
@@ -16,8 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
-@SpringBootTest
-class CheckoutServiceTest {
+class CheckoutServiceTest extends ServiceTest {
 
     @Autowired
     private CheckoutService checkoutService;
@@ -27,12 +25,6 @@ class CheckoutServiceTest {
 
     @Autowired
     private UserRepository userRepository;
-
-    @AfterEach
-    void tearDown() {
-        productRepository.deleteAll();
-        userRepository.deleteAll();
-    }
 
     @Test
     void 상품_정보와_포인트_잔액을_조회한다() {

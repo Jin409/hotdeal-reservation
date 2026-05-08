@@ -3,15 +3,14 @@ package com.hotdeal.reservation.booking;
 import com.hotdeal.reservation.booking.dto.BookingRequest;
 import com.hotdeal.reservation.booking.dto.BookingResponse;
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
+import com.hotdeal.reservation.common.ServiceTest;
 import com.hotdeal.reservation.product.OutOfStockException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,8 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
-@SpringBootTest
-class BookingServiceTest {
+class BookingServiceTest extends ServiceTest {
 
     @Autowired
     private BookingService bookingService;
@@ -31,16 +29,6 @@ class BookingServiceTest {
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private BookingRepository bookingRepository;
-
-    @AfterEach
-    void tearDown() {
-        bookingRepository.deleteAll();
-        productRepository.deleteAll();
-        userRepository.deleteAll();
-    }
 
     @Test
     void 예약_성공시_재고가_1_감소하고_CONFIRMED_상태가_된다() {

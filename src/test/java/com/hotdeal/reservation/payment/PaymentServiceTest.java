@@ -1,37 +1,25 @@
 package com.hotdeal.reservation.payment;
 
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
+import com.hotdeal.reservation.common.ServiceTest;
 import com.hotdeal.reservation.common.exception.BadRequestException;
-import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest
-class PaymentServiceTest {
+class PaymentServiceTest extends ServiceTest {
 
     @Autowired
     private PaymentService paymentService;
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @AfterEach
-    void tearDown() {
-        userRepository.deleteAll();
-        productRepository.deleteAll();
-    }
 
     @Test
     void 신용카드와_Y페이_혼용시_예외가_발생한다() {
