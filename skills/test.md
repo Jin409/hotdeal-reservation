@@ -57,7 +57,6 @@ class PaymentValidatorTest {
 ### 베이스 클래스: `ServiceTest`
 ```java
 @SpringBootTest
-@Transactional
 @ActiveProfiles("test")
 public abstract class ServiceTest {
     // Testcontainers MySQL + Redis 실제 연동
@@ -87,6 +86,9 @@ public class TestContainersConfig {
 ```
 
 ### 규칙
+- `@Transactional`을 테스트에 붙이지 않습니다. (실제 코드의 트랜잭션 누락을 감지하기 위함)
+- `@AfterEach`로 데이터를 정리합니다.
+- 여러 값을 검증할 때는 `assertAll`로 묶어서 한번에 검증합니다.
 - `PgClient`만 `@MockBean`으로 처리합니다. (실제 PG사 연동 불가)
 - 데이터 초기화는 `@Sql(scripts = "/fixture.sql")`로 주입합니다.
 - fixture.sql 위치: `src/test/resources/fixture.sql`
