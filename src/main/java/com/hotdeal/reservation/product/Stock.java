@@ -21,6 +21,10 @@ public class Stock {
         this.quantity = quantity;
     }
 
+    public boolean isEmpty() {
+        return this.quantity <= 0;
+    }
+
     public Stock decrease() {
         if (this.quantity <= 0) {
             throw new OutOfStockException("재고가 없습니다.");

@@ -16,7 +16,6 @@ public class QueueService {
         }
 
         queueRedisRepository.addToQueue(productId, userId);
-
         return queueRedisRepository.getRank(productId, userId);
     }
 }
