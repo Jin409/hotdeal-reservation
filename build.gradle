@@ -42,6 +42,7 @@ dependencies {
 	testImplementation 'org.testcontainers:mysql'
 	testImplementation 'com.redis:testcontainers-redis:2.2.4'
 	testImplementation 'io.rest-assured:rest-assured'
+	testImplementation 'com.github.codemonstur:embedded-redis:1.4.3'
 	testRuntimeOnly 'com.h2database:h2'
 }
 

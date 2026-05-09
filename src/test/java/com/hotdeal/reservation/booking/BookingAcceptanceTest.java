@@ -2,18 +2,15 @@ package com.hotdeal.reservation.booking;
 
 import com.hotdeal.reservation.booking.dto.BookingRequest;
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
+import com.hotdeal.reservation.common.AcceptanceTest;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,11 +19,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class BookingAcceptanceTest {
-
-    @LocalServerPort
-    int port;
+class BookingAcceptanceTest extends AcceptanceTest {
 
     @Autowired
     private ProductRepository productRepository;
@@ -39,21 +32,12 @@ class BookingAcceptanceTest {
 
     @BeforeEach
     void setUp() {
-        RestAssured.port = port;
-        productRepository.deleteAll();
-        userRepository.deleteAll();
         product = productRepository.save(
                 new Product("제주 호텔", 100000, 10,
                         LocalDateTime.of(2026, 6, 1, 15, 0),
                         LocalDateTime.of(2026, 6, 2, 11, 0))
         );
         user = userRepository.save(new User("홍길동", "hong@test.com", 50000L));
-    }
-
-    @AfterEach
-    void tearDown() {
-        productRepository.deleteAll();
-        userRepository.deleteAll();
     }
 
     @Test
