@@ -54,7 +54,8 @@ class CheckoutServiceTest extends ServiceTest {
                 () -> assertThat(response.productName()).isEqualTo("제주 호텔"),
                 () -> assertThat(response.price()).isEqualTo(100000),
                 () -> assertThat(response.pointBalance()).isEqualTo(50000L),
-                () -> assertThat(response.rank()).isEqualTo(1L)
+                () -> assertThat(response.rank()).isEqualTo(1L),
+                () -> assertThat(response.bookingId()).isNotNull()
         );
     }
 

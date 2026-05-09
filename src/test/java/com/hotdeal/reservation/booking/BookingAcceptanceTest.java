@@ -5,6 +5,7 @@ import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.AcceptanceTest;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
+import com.hotdeal.reservation.stock.StockRedisRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
 import io.restassured.http.ContentType;
@@ -27,8 +28,15 @@ class BookingAcceptanceTest extends AcceptanceTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private StockRedisRepository stockRedisRepository;
+
     private Product product;
     private User user;
+    private Booking booking;
 
     @BeforeEach
     void setUp() {
@@ -38,6 +46,8 @@ class BookingAcceptanceTest extends AcceptanceTest {
                         LocalDateTime.of(2026, 6, 2, 11, 0))
         );
         user = userRepository.save(new User("홍길동", "hong@test.com", 50000L));
+        booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
+        stockRedisRepository.set(product.getId(), 10);
     }
 
     @Test
@@ -52,9 +62,9 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .body(request)
         .when()
-                .post("/bookings")
+                .post("/bookings/{bookingId}", booking.getId())
         .then()
-                .statusCode(201)
+                .statusCode(200)
                 .body("bookingId", notNullValue())
                 .body("status", equalTo("CONFIRMED"));
     }
@@ -71,7 +81,7 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .body(request)
         .when()
-                .post("/bookings")
+                .post("/bookings/{bookingId}", booking.getId())
         .then()
                 .statusCode(400);
     }
@@ -87,7 +97,7 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .body(request)
         .when()
-                .post("/bookings")
+                .post("/bookings/{bookingId}", booking.getId())
         .then()
                 .statusCode(400);
     }
