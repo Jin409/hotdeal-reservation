@@ -48,7 +48,8 @@ class CheckoutAcceptanceTest extends AcceptanceTest {
                 .body("productName", equalTo("제주 호텔"))
                 .body("price", equalTo(100000))
                 .body("pointBalance", equalTo(50000))
-                .body("rank", notNullValue());
+                .body("rank", notNullValue())
+                .body("idempotencyKey", notNullValue());
     }
 
     @Test
