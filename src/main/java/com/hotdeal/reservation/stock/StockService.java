@@ -1,6 +1,6 @@
 package com.hotdeal.reservation.stock;
 
-import com.hotdeal.reservation.product.OutOfStockException;
+import com.hotdeal.reservation.common.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +14,7 @@ public class StockService {
         Long remaining = stockRedisRepository.decrease(productId);
         if (remaining < 0) {
             stockRedisRepository.increase(productId);
-            throw new OutOfStockException("재고가 없습니다.");
+            throw new BadRequestException("재고가 없습니다.");
         }
     }
 

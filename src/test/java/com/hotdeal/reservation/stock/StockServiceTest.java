@@ -1,7 +1,7 @@
 package com.hotdeal.reservation.stock;
 
 import com.hotdeal.reservation.common.ServiceTest;
-import com.hotdeal.reservation.product.OutOfStockException;
+import com.hotdeal.reservation.common.exception.BadRequestException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -34,7 +34,7 @@ class StockServiceTest extends ServiceTest {
         stockRedisRepository.set(1L, 0);
 
         assertThatThrownBy(() -> stockService.decrease(1L))
-                .isInstanceOf(OutOfStockException.class);
+                .isInstanceOf(BadRequestException.class);
 
         assertThat(redisTemplate.opsForValue().get(StockKeys.stock(1L))).isEqualTo("0");
     }

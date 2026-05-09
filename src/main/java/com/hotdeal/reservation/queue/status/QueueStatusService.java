@@ -4,7 +4,7 @@ import com.hotdeal.reservation.booking.Booking;
 import com.hotdeal.reservation.booking.BookingRepository;
 import com.hotdeal.reservation.booking.BookingStatus;
 import com.hotdeal.reservation.common.exception.NotFoundException;
-import com.hotdeal.reservation.product.OutOfStockException;
+import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.queue.QueueRedisRepository;
 import com.hotdeal.reservation.queue.QueueService;
 import com.hotdeal.reservation.stock.StockRedisRepository;
@@ -49,7 +49,7 @@ public class QueueStatusService {
 
     private QueueStatusResponse tryReEnter(Long productId, Long userId) {
         if (!hasStock(productId)) {
-            throw new OutOfStockException("재고가 없습니다.");
+            throw new BadRequestException("재고가 없습니다.");
         }
 
         queueService.removeEntry(productId, userId);

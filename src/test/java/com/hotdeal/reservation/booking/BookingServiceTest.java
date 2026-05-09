@@ -5,7 +5,6 @@ import com.hotdeal.reservation.booking.dto.BookingResponse;
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.ServiceTest;
 import com.hotdeal.reservation.common.exception.BadRequestException;
-import com.hotdeal.reservation.product.OutOfStockException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.stock.StockKeys;
@@ -81,7 +80,7 @@ class BookingServiceTest extends ServiceTest {
         ));
 
         assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
-                .isInstanceOf(OutOfStockException.class);
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test

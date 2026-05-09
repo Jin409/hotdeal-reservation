@@ -1,5 +1,6 @@
 package com.hotdeal.reservation.product;
 
+import com.hotdeal.reservation.common.exception.BadRequestException;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,7 +22,7 @@ class StockTest {
         Stock stock = new Stock(0);
 
         assertThatThrownBy(stock::decrease)
-                .isInstanceOf(OutOfStockException.class);
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
