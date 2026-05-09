@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 public record CheckoutResponse(
         Long bookingId,
+        String idempotencyKey,
         String productName,
         long price,
         LocalDateTime checkInAt,
@@ -14,9 +15,10 @@ public record CheckoutResponse(
         long pointBalance,
         Long rank
 ) {
-    public static CheckoutResponse of(Product product, User user, Long rank, Long bookingId) {
+    public static CheckoutResponse of(Product product, User user, Long rank, Long bookingId, String idempotencyKey) {
         return new CheckoutResponse(
                 bookingId,
+                idempotencyKey,
                 product.getName(),
                 product.getPrice(),
                 product.getCheckInAt(),
