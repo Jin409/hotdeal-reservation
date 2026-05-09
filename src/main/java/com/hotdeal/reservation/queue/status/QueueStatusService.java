@@ -4,7 +4,10 @@ import com.hotdeal.reservation.booking.Booking;
 import com.hotdeal.reservation.booking.BookingRepository;
 import com.hotdeal.reservation.booking.BookingStatus;
 import com.hotdeal.reservation.common.exception.NotFoundException;
+import com.hotdeal.reservation.product.OutOfStockException;
 import com.hotdeal.reservation.queue.QueueRedisRepository;
+import com.hotdeal.reservation.queue.QueueService;
+import com.hotdeal.reservation.stock.StockRedisRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +19,8 @@ public class QueueStatusService {
 
     private final QueueRedisRepository queueRedisRepository;
     private final BookingRepository bookingRepository;
+    private final QueueService queueService;
+    private final StockRedisRepository stockRedisRepository;
 
     public QueueStatusResponse getStatus(Long productId, Long userId) {
         Long rank = queueRedisRepository.getRank(productId, userId);
@@ -39,6 +44,21 @@ public class QueueStatusService {
             return QueueStatusResponse.completed();
         }
 
-        throw new NotFoundException("대기열 내의 사용자");
+        return tryReEnter(productId, userId);
+    }
+
+    private QueueStatusResponse tryReEnter(Long productId, Long userId) {
+        if (!hasStock(productId)) {
+            throw new OutOfStockException("재고가 없습니다.");
+        }
+
+        queueService.removeEntry(productId, userId);
+        Long newRank = queueService.enter(productId, userId);
+        return QueueStatusResponse.waiting(newRank);
+    }
+
+    private boolean hasStock(Long productId) {
+        String stock = stockRedisRepository.get(productId);
+        return stock != null && Long.parseLong(stock) > 0;
     }
 }

@@ -18,6 +18,10 @@ public class StockRedisRepository {
         redisTemplate.opsForValue().increment(StockKeys.stock(productId));
     }
 
+    public String get(Long productId) {
+        return redisTemplate.opsForValue().get(StockKeys.stock(productId));
+    }
+
     public void set(Long productId, int quantity) {
         redisTemplate.opsForValue().set(StockKeys.stock(productId), String.valueOf(quantity));
     }
