@@ -91,7 +91,8 @@ public class TestContainersConfig {
 - `@AfterEach`로 데이터를 정리합니다.
 - 여러 값을 검증할 때는 `assertAll`로 묶어서 한번에 검증합니다.
 - `PgClient`만 `@MockBean` 허용합니다. (실제 PG사 연동 불가)
-- Redis는 Embedded Redis(`it.ozimov:embedded-redis`)를 사용합니다. MockBean 불필요.
+- Redis는 Embedded Redis(`com.github.codemonstur:embedded-redis`)를 사용합니다. MockBean 불필요.
+- `ServiceTest`, `AcceptanceTest` 베이스 클래스를 상속하면 DB 정리 + Redis 정리가 자동으로 됩니다.
 - 데이터 초기화는 `@Sql(scripts = "/fixture.sql")`로 주입합니다.
 - fixture.sql 위치: `src/test/resources/fixture.sql`
 
@@ -170,31 +171,17 @@ QueueStatusResponse pollUntilDone(Long bookingId)  // CONFIRMED or FAILED까지 
 
 ---
 
-## 프로파일 설정
+## 테스트 인프라
 
-```
-application.yml          → spring.profiles.active: local
-application-local.yml    → H2 MODE=MySQL (Docker 불필요)
-application-test.yml     → Testcontainers (실제 MySQL + Redis)
-```
+### DB
+- H2 MODE=MySQL 사용 (Docker 불필요)
+- `DatabaseCleaner`가 매 테스트 후 전체 테이블 TRUNCATE
 
-### 로컬 (기본)
-```yaml
-# src/test/resources/application.yml
-spring:
-  profiles:
-    active: local
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-```
-
-- 단위 테스트, contextLoads: H2 + Redis 비활성화로 Docker 없이 실행합니다.
-- 서비스/인수 테스트: `@ActiveProfiles("test")` + Testcontainers로 실제 MySQL + Redis를 띄우고 `@DynamicPropertySource`로 연결합니다.
+### Redis
+- Embedded Redis 사용 (Docker 불필요)
+- `EmbeddedRedisConfig`가 랜덤 포트로 Redis 서버 기동
+- `ServiceTest`, `AcceptanceTest`에서 `@Import(EmbeddedRedisConfig.class)` 적용
+- 매 테스트 후 `flushAll`로 Redis 정리
 
 ### 주의사항
 H2 MODE=MySQL이 완벽하지 않으므로 MySQL 전용 문법 사용을 금지합니다.
