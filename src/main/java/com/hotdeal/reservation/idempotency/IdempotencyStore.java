@@ -13,18 +13,18 @@ public class IdempotencyStore {
 
     private static final String PREFIX = "idempotency:";
     private static final String PROCESSING = "PROCESSING";
-    private static final long TTL_HOURS = 24;
+    private static final long TTL_MINUTES = 10;
 
     private final StringRedisTemplate redisTemplate;
 
     public boolean markProcessing(String key) {
         Boolean result = redisTemplate.opsForValue()
-                .setIfAbsent(PREFIX + key, PROCESSING, TTL_HOURS, TimeUnit.HOURS);
+                .setIfAbsent(PREFIX + key, PROCESSING, TTL_MINUTES, TimeUnit.MINUTES);
         return Boolean.TRUE.equals(result);
     }
 
     public void save(String key, String json) {
-        redisTemplate.opsForValue().set(PREFIX + key, json, TTL_HOURS, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(PREFIX + key, json, TTL_MINUTES, TimeUnit.MINUTES);
     }
 
     public Optional<String> find(String key) {
