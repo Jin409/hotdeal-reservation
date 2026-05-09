@@ -11,4 +11,8 @@ public record QueueStatusResponse(
     public static QueueStatusResponse ready() {
         return new QueueStatusResponse(QueueStatus.READY, 1L);
     }
+
+    public static QueueStatusResponse completed() {
+        return new QueueStatusResponse(QueueStatus.COMPLETED, null);
+    }
 }
