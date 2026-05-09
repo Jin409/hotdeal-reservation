@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,13 +19,18 @@ public class PaymentService {
 
     private final PaymentProcessorFactory processorFactory;
 
-    public void pay(User user, List<PaymentMethodRequest> paymentMethods, long productPrice) {
+    public void pay(Long bookingId, User user, List<PaymentMethodRequest> paymentMethods, long productPrice) {
         validatePaymentCombination(paymentMethods);
         validateTotalAmountMatchesPrice(paymentMethods, productPrice);
         validateHasEnoughPoint(paymentMethods, user);
 
-        processExternalPayments(user, paymentMethods);
-        processPointPayment(user, paymentMethods);
+        String pgIdempotencyKey = generatePgIdempotencyKey(bookingId);
+        processExternalPayments(pgIdempotencyKey, user, paymentMethods);
+        processPointPayment(pgIdempotencyKey, user, paymentMethods);
+    }
+
+    private String generatePgIdempotencyKey(Long bookingId) {
+        return "pg:" + bookingId + ":" + UUID.randomUUID();
     }
 
     private void validatePaymentCombination(List<PaymentMethodRequest> paymentMethods) {
@@ -52,22 +58,22 @@ public class PaymentService {
         }
     }
 
-    private void processExternalPayments(User user, List<PaymentMethodRequest> paymentMethods) {
+    private void processExternalPayments(String idempotencyKey, User user, List<PaymentMethodRequest> paymentMethods) {
         paymentMethods.stream()
                 .filter(pm -> !isPoint(pm))
-                .forEach(pm -> execute(user, pm));
+                .forEach(pm -> execute(idempotencyKey, user, pm));
     }
 
-    private void processPointPayment(User user, List<PaymentMethodRequest> paymentMethods) {
+    private void processPointPayment(String idempotencyKey, User user, List<PaymentMethodRequest> paymentMethods) {
         paymentMethods.stream()
                 .filter(this::isPoint)
-                .forEach(pm -> execute(user, pm));
+                .forEach(pm -> execute(idempotencyKey, user, pm));
     }
 
-    private void execute(User user, PaymentMethodRequest pm) {
+    private void execute(String idempotencyKey, User user, PaymentMethodRequest pm) {
         PaymentType type = PaymentType.valueOf(pm.type());
         PaymentProcessor processor = processorFactory.getProcessor(type);
-        processor.process(user, pm.amount());
+        processor.process(idempotencyKey, user, pm.amount());
     }
 
     private boolean isPoint(PaymentMethodRequest pm) {

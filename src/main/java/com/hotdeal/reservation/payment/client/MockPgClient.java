@@ -6,6 +6,6 @@ import org.springframework.stereotype.Component;
 public class MockPgClient implements PgClient {
 
     @Override
-    public void charge(long amount) {
+    public void charge(String idempotencyKey, long amount) {
     }
 }
