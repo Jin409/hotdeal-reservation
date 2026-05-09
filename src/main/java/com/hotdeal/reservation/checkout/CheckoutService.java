@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class CheckoutService {
@@ -30,7 +32,8 @@ public class CheckoutService {
 
         Long rank = queueService.enter(productId, userId);
         Booking booking = bookingRepository.save(Booking.waiting(userId, productId));
+        String idempotencyKey = UUID.randomUUID().toString();
 
-        return CheckoutResponse.of(product, user, rank, booking.getId());
+        return CheckoutResponse.of(product, user, rank, booking.getId(), idempotencyKey);
     }
 }

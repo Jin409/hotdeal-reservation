@@ -13,8 +13,8 @@ public class YPayProcessor implements PaymentProcessor {
     private final PgClient pgClient;
 
     @Override
-    public void process(User user, long amount) {
-        pgClient.charge(amount);
+    public void process(String idempotencyKey, User user, long amount) {
+        pgClient.charge(idempotencyKey, amount);
     }
 
     @Override

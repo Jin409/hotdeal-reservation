@@ -55,7 +55,8 @@ class CheckoutServiceTest extends ServiceTest {
                 () -> assertThat(response.price()).isEqualTo(100000),
                 () -> assertThat(response.pointBalance()).isEqualTo(50000L),
                 () -> assertThat(response.rank()).isEqualTo(1L),
-                () -> assertThat(response.bookingId()).isNotNull()
+                () -> assertThat(response.bookingId()).isNotNull(),
+                () -> assertThat(response.idempotencyKey()).isNotNull()
         );
     }
 

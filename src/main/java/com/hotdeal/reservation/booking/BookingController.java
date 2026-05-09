@@ -2,6 +2,7 @@ package com.hotdeal.reservation.booking;
 
 import com.hotdeal.reservation.booking.dto.BookingRequest;
 import com.hotdeal.reservation.booking.dto.BookingResponse;
+import com.hotdeal.reservation.idempotency.Idempotent;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ public class BookingController {
 
     private final BookingService bookingService;
 
+    @Idempotent
     @PostMapping("/bookings/{bookingId}")
     public ResponseEntity<BookingResponse> book(
             @RequestHeader("userId") Long userId,

@@ -28,11 +28,10 @@ public class BookingService {
         stockService.decrease(product.getId());
 
         try {
-            paymentService.pay(user, request.paymentMethods(), product.getPrice());
+            paymentService.pay(bookingId, user, request.paymentMethods(), product.getPrice());
             booking.confirm();
         } catch (Exception e) {
             stockService.rollback(product.getId());
-            booking.cancel();
             throw e;
         }
 

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class YPointProcessor implements PaymentProcessor {
 
     @Override
-    public void process(User user, long amount) {
+    public void process(String idempotencyKey, User user, long amount) {
         user.usePoints(amount);
     }
 
