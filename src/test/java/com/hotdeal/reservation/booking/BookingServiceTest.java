@@ -18,12 +18,14 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertAll;
 
 class BookingServiceTest extends ServiceTest {
 
     @Autowired
     private BookingService bookingService;
+
+    @Autowired
+    private BookingRepository bookingRepository;
 
     @Autowired
     private ProductRepository productRepository;
@@ -35,20 +37,22 @@ class BookingServiceTest extends ServiceTest {
     private StockRedisRepository stockRedisRepository;
 
     @Test
-    void 예약_성공시_재고가_1_감소하고_CONFIRMED_상태가_된다() {
+    void 예약_성공시_CONFIRMED_상태가_된다() {
         Product product = productRepository.save(
                 new Product("제주 호텔", 100000, 10,
                         LocalDateTime.of(2026, 6, 1, 15, 0),
                         LocalDateTime.of(2026, 6, 2, 11, 0))
         );
-        stockRedisRepository.set(product.getId(), 10);
         User user = userRepository.save(new User("홍길동", "hong@test.com", 50000L));
+        Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
+        stockRedisRepository.set(product.getId(), 10);
+
         BookingRequest request = new BookingRequest(product.getId(), List.of(
                 new PaymentMethodRequest("CREDIT_CARD", 50000),
                 new PaymentMethodRequest("YPOINT", 50000)
         ));
 
-        BookingResponse response = bookingService.book(user.getId(), request);
+        BookingResponse response = bookingService.book(user.getId(), booking.getId(), request);
 
         assertThat(response.status()).isEqualTo(BookingStatus.CONFIRMED);
     }
@@ -60,13 +64,15 @@ class BookingServiceTest extends ServiceTest {
                         LocalDateTime.of(2026, 6, 1, 15, 0),
                         LocalDateTime.of(2026, 6, 2, 11, 0))
         );
-        stockRedisRepository.set(product.getId(), 0);
         User user = userRepository.save(new User("홍길동", "hong@test.com", 100000L));
+        Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
+        stockRedisRepository.set(product.getId(), 0);
+
         BookingRequest request = new BookingRequest(product.getId(), List.of(
                 new PaymentMethodRequest("CREDIT_CARD", 100000)
         ));
 
-        assertThatThrownBy(() -> bookingService.book(user.getId(), request))
+        assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
                 .isInstanceOf(OutOfStockException.class);
     }
 }

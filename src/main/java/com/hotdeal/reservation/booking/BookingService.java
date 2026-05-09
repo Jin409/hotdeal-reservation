@@ -16,12 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class BookingService {
 
     private final EntityUtils entityUtils;
-    private final BookingRepository bookingRepository;
     private final PaymentService paymentService;
     private final StockService stockService;
 
     @Transactional
-    public BookingResponse book(Long userId, BookingRequest request) {
+    public BookingResponse book(Long userId, Long bookingId, BookingRequest request) {
+        Booking booking = entityUtils.getEntity(bookingId, Booking.class);
         Product product = entityUtils.getEntity(request.productId(), Product.class);
         User user = entityUtils.getEntity(userId, User.class);
 
@@ -29,12 +29,13 @@ public class BookingService {
 
         try {
             paymentService.pay(user, request.paymentMethods(), product.getPrice());
+            booking.confirm();
         } catch (Exception e) {
             stockService.rollback(product.getId());
+            booking.cancel();
             throw e;
         }
 
-        Booking booking = bookingRepository.save(Booking.confirmed(userId, product.getId()));
         return new BookingResponse(booking.getId(), booking.getStatus());
     }
 }

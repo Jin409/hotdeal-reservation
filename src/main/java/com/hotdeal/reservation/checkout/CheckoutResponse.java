@@ -6,6 +6,7 @@ import com.hotdeal.reservation.user.User;
 import java.time.LocalDateTime;
 
 public record CheckoutResponse(
+        Long bookingId,
         String productName,
         long price,
         LocalDateTime checkInAt,
@@ -13,8 +14,9 @@ public record CheckoutResponse(
         long pointBalance,
         Long rank
 ) {
-    public static CheckoutResponse of(Product product, User user, Long rank) {
+    public static CheckoutResponse of(Product product, User user, Long rank, Long bookingId) {
         return new CheckoutResponse(
+                bookingId,
                 product.getName(),
                 product.getPrice(),
                 product.getCheckInAt(),

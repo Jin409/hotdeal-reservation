@@ -30,8 +30,8 @@ public class Booking {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public static Booking confirmed(Long userId, Long productId) {
-        return new Booking(userId, productId, BookingStatus.CONFIRMED);
+    public static Booking waiting(Long userId, Long productId) {
+        return new Booking(userId, productId, BookingStatus.WAITING);
     }
 
     private Booking(Long userId, Long productId, BookingStatus status) {
@@ -39,5 +39,13 @@ public class Booking {
         this.productId = productId;
         this.status = status;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public void confirm() {
+        this.status = BookingStatus.CONFIRMED;
+    }
+
+    public void cancel() {
+        this.status = BookingStatus.CANCELLED;
     }
 }
