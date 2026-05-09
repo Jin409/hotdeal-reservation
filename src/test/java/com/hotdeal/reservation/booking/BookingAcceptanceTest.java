@@ -5,6 +5,7 @@ import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.AcceptanceTest;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
+import com.hotdeal.reservation.stock.StockRedisRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
 import io.restassured.http.ContentType;
@@ -27,6 +28,9 @@ class BookingAcceptanceTest extends AcceptanceTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private StockRedisRepository stockRedisRepository;
+
     private Product product;
     private User user;
 
@@ -38,6 +42,7 @@ class BookingAcceptanceTest extends AcceptanceTest {
                         LocalDateTime.of(2026, 6, 2, 11, 0))
         );
         user = userRepository.save(new User("홍길동", "hong@test.com", 50000L));
+        stockRedisRepository.set(product.getId(), 10);
     }
 
     @Test

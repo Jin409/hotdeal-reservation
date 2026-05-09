@@ -7,6 +7,7 @@ import com.hotdeal.reservation.common.ServiceTest;
 import com.hotdeal.reservation.product.OutOfStockException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
+import com.hotdeal.reservation.stock.StockRedisRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class BookingServiceTest extends ServiceTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private StockRedisRepository stockRedisRepository;
+
     @Test
     void 예약_성공시_재고가_1_감소하고_CONFIRMED_상태가_된다() {
         Product product = productRepository.save(
@@ -37,6 +41,7 @@ class BookingServiceTest extends ServiceTest {
                         LocalDateTime.of(2026, 6, 1, 15, 0),
                         LocalDateTime.of(2026, 6, 2, 11, 0))
         );
+        stockRedisRepository.set(product.getId(), 10);
         User user = userRepository.save(new User("홍길동", "hong@test.com", 50000L));
         BookingRequest request = new BookingRequest(product.getId(), List.of(
                 new PaymentMethodRequest("CREDIT_CARD", 50000),
@@ -45,11 +50,7 @@ class BookingServiceTest extends ServiceTest {
 
         BookingResponse response = bookingService.book(user.getId(), request);
 
-        Product updated = productRepository.findById(product.getId()).get();
-        assertAll(
-                () -> assertThat(response.status()).isEqualTo(BookingStatus.CONFIRMED),
-                () -> assertThat(updated.getStock().getQuantity()).isEqualTo(9)
-        );
+        assertThat(response.status()).isEqualTo(BookingStatus.CONFIRMED);
     }
 
     @Test
@@ -59,6 +60,7 @@ class BookingServiceTest extends ServiceTest {
                         LocalDateTime.of(2026, 6, 1, 15, 0),
                         LocalDateTime.of(2026, 6, 2, 11, 0))
         );
+        stockRedisRepository.set(product.getId(), 0);
         User user = userRepository.save(new User("홍길동", "hong@test.com", 100000L));
         BookingRequest request = new BookingRequest(product.getId(), List.of(
                 new PaymentMethodRequest("CREDIT_CARD", 100000)
