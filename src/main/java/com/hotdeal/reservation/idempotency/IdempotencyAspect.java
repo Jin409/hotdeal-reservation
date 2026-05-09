@@ -2,6 +2,7 @@ package com.hotdeal.reservation.idempotency;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hotdeal.reservation.common.exception.BadRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -83,7 +84,7 @@ public class IdempotencyAspect {
         HttpServletRequest request = attrs.getRequest();
         String key = request.getHeader("Idempotency-Key");
         if (key == null || key.isBlank()) {
-            throw new IllegalArgumentException("Idempotency-Key 헤더가 필요합니다.");
+            throw new BadRequestException("Idempotency-Key 헤더가 필요합니다.");
         }
 
         return key;
