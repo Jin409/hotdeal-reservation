@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(EmbeddedRedisConfig.class)
@@ -18,6 +19,9 @@ public abstract class AcceptanceTest {
     @Autowired
     private DatabaseCleaner databaseCleaner;
 
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
     @BeforeEach
     void setUpPort() {
         RestAssured.port = port;
@@ -26,5 +30,6 @@ public abstract class AcceptanceTest {
     @AfterEach
     void cleanUp() {
         databaseCleaner.clear();
+        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushAll();
     }
 }

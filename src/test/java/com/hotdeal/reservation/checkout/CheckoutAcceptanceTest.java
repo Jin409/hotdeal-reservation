@@ -70,6 +70,25 @@ class CheckoutAcceptanceTest extends AcceptanceTest {
     }
 
     @Test
+    void 동일_유저가_같은_상품에_중복_진입하면_409를_반환한다() {
+        given()
+                .param("productId", product.getId())
+                .header("userId", user.getId())
+        .when()
+                .get("/checkout")
+        .then()
+                .statusCode(200);
+
+        given()
+                .param("productId", product.getId())
+                .header("userId", user.getId())
+        .when()
+                .get("/checkout")
+        .then()
+                .statusCode(409);
+    }
+
+    @Test
     void 존재하지_않는_상품이면_404를_반환한다() {
         given()
                 .param("productId", 999)
