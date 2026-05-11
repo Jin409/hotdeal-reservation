@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 public class IdempotencyStore {
 
     private static final String PREFIX = "idempotency:";
+    private static final String CHECKOUT_PREFIX = "idempotency:checkout:";
     private static final String PROCESSING = "PROCESSING";
     private static final long TTL_MINUTES = 10;
 
@@ -38,5 +39,17 @@ public class IdempotencyStore {
 
     public void delete(String key) {
         redisTemplate.delete(PREFIX + key);
+    }
+
+    public String issue(String id) {
+        String checkoutKey = CHECKOUT_PREFIX + id;
+        String existing = redisTemplate.opsForValue().get(checkoutKey);
+        if (existing != null) {
+            return existing;
+        }
+
+        String newKey = java.util.UUID.randomUUID().toString();
+        redisTemplate.opsForValue().set(checkoutKey, newKey, TTL_MINUTES, TimeUnit.MINUTES);
+        return newKey;
     }
 }
