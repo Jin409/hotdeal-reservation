@@ -6,6 +6,7 @@ import com.hotdeal.reservation.common.AcceptanceTest;
 import com.hotdeal.reservation.idempotency.IdempotencyStore;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
+import com.hotdeal.reservation.queue.QueueService;
 import com.hotdeal.reservation.stock.StockRedisRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
@@ -39,6 +40,9 @@ class BookingAcceptanceTest extends AcceptanceTest {
     @Autowired
     private IdempotencyStore idempotencyStore;
 
+    @Autowired
+    private QueueService queueService;
+
     private Product product;
     private User user;
     private Booking booking;
@@ -53,6 +57,7 @@ class BookingAcceptanceTest extends AcceptanceTest {
         user = userRepository.save(new User("홍길동", "hong@test.com", 50000L));
         booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
         stockRedisRepository.set(product.getId(), 10);
+        queueService.enter(product.getId(), user.getId());
     }
 
     @Test
