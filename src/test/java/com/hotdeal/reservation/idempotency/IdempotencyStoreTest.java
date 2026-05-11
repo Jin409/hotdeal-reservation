@@ -70,4 +70,27 @@ class IdempotencyStoreTest extends ServiceTest {
 
         assertThat(result).isTrue();
     }
+
+    @Test
+    void 멱등키를_발급하면_UUID를_반환한다() {
+        String key = idempotencyStore.issue("1:10");
+
+        assertThat(key).isNotNull();
+    }
+
+    @Test
+    void 동일_ID로_발급하면_같은_멱등키를_반환한다() {
+        String first = idempotencyStore.issue("1:10");
+        String second = idempotencyStore.issue("1:10");
+
+        assertThat(first).isEqualTo(second);
+    }
+
+    @Test
+    void 다른_ID로_발급하면_다른_멱등키를_반환한다() {
+        String key1 = idempotencyStore.issue("1:10");
+        String key2 = idempotencyStore.issue("1:20");
+
+        assertThat(key1).isNotEqualTo(key2);
+    }
 }

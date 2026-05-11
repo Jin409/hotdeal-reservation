@@ -4,14 +4,13 @@ import com.hotdeal.reservation.booking.Booking;
 import com.hotdeal.reservation.booking.BookingRepository;
 import com.hotdeal.reservation.common.EntityUtils;
 import com.hotdeal.reservation.common.exception.BadRequestException;
+import com.hotdeal.reservation.idempotency.IdempotencyStore;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.queue.QueueService;
 import com.hotdeal.reservation.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +19,7 @@ public class CheckoutService {
     private final EntityUtils entityUtils;
     private final QueueService queueService;
     private final BookingRepository bookingRepository;
+    private final IdempotencyStore idempotencyStore;
 
     @Transactional
     public CheckoutResponse checkout(Long productId, Long userId) {
@@ -32,7 +32,7 @@ public class CheckoutService {
 
         Long rank = queueService.enter(productId, userId);
         Booking booking = bookingRepository.save(Booking.waiting(userId, productId));
-        String idempotencyKey = UUID.randomUUID().toString();
+        String idempotencyKey = idempotencyStore.issue(productId + ":" + userId);
 
         return CheckoutResponse.of(product, user, rank, booking.getId(), idempotencyKey);
     }
