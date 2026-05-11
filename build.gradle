@@ -27,6 +27,7 @@ dependencies {
 	// 부가 기능
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-aop'
+	implementation 'org.springframework.retry:spring-retry'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
