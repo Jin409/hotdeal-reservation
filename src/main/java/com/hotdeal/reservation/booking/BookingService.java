@@ -35,6 +35,7 @@ public class BookingService {
 
         try {
             paymentService.pay(bookingId, user, request.paymentMethods(), product.getPrice());
+            product.decreaseStock();
             booking.confirm();
         } catch (Exception e) {
             stockService.rollback(product.getId());
