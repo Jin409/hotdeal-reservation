@@ -19,6 +19,10 @@ public class QueueRedisRepository {
         redisTemplate.opsForList().rightPush(QueueKeys.queue(productId), userId.toString());
     }
 
+    public void removeEntry(Long productId, Long userId) {
+        redisTemplate.opsForSet().remove(QueueKeys.entered(productId), userId.toString());
+    }
+
     public Long getRank(Long productId, Long userId) {
         Long index = redisTemplate.opsForList().indexOf(QueueKeys.queue(productId), userId.toString());
         if (index == null) {

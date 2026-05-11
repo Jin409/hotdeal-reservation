@@ -1,5 +1,6 @@
 package com.hotdeal.reservation.product;
 
+import com.hotdeal.reservation.common.exception.BadRequestException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.AccessLevel;
@@ -27,7 +28,7 @@ public class Stock {
 
     public Stock decrease() {
         if (this.quantity <= 0) {
-            throw new OutOfStockException("재고가 없습니다.");
+            throw new BadRequestException("재고가 없습니다.");
         }
         return new Stock(this.quantity - 1);
     }

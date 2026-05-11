@@ -3,7 +3,7 @@ package com.hotdeal.reservation.checkout;
 import com.hotdeal.reservation.booking.Booking;
 import com.hotdeal.reservation.booking.BookingRepository;
 import com.hotdeal.reservation.common.EntityUtils;
-import com.hotdeal.reservation.product.OutOfStockException;
+import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.queue.QueueService;
 import com.hotdeal.reservation.user.User;
@@ -27,7 +27,7 @@ public class CheckoutService {
         User user = entityUtils.getEntity(userId, User.class);
 
         if (product.getStock().isEmpty()) {
-            throw new OutOfStockException("재고가 없습니다.");
+            throw new BadRequestException("재고가 없습니다.");
         }
 
         Long rank = queueService.enter(productId, userId);

@@ -1,6 +1,5 @@
 package com.hotdeal.reservation.common.exception;
 
-import com.hotdeal.reservation.product.OutOfStockException;
 import com.hotdeal.reservation.queue.DuplicateEntryException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,12 +17,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(e.getMessage()));
-    }
-
-    @ExceptionHandler(OutOfStockException.class)
-    public ResponseEntity<ErrorResponse> handleOutOfStock(OutOfStockException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(e.getMessage()));
     }

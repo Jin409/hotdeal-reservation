@@ -18,4 +18,8 @@ public class QueueService {
         queueRedisRepository.addToQueue(productId, userId);
         return queueRedisRepository.getRank(productId, userId);
     }
+
+    public void removeEntry(Long productId, Long userId) {
+        queueRedisRepository.removeEntry(productId, userId);
+    }
 }
