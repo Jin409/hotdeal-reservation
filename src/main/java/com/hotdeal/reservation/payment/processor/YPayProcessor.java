@@ -2,8 +2,8 @@ package com.hotdeal.reservation.payment.processor;
 
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentType;
-import com.hotdeal.reservation.payment.client.PgClient;
 import com.hotdeal.reservation.payment.client.PgException;
+import com.hotdeal.reservation.payment.client.YPayPgClient;
 import com.hotdeal.reservation.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.retry.annotation.Backoff;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class YPayProcessor implements PaymentProcessor {
 
-    private final PgClient pgClient;
+    private final YPayPgClient yPayPgClient;
 
     @Override
     @Retryable(
@@ -24,7 +24,7 @@ public class YPayProcessor implements PaymentProcessor {
     )
     public void process(String idempotencyKey, User user, long amount) {
         try {
-            pgClient.charge(idempotencyKey, amount);
+            yPayPgClient.charge(idempotencyKey, amount);
         } catch (PgException e) {
             if (!e.isRetryable()) {
                 throw new BadRequestException(e.getMessage());

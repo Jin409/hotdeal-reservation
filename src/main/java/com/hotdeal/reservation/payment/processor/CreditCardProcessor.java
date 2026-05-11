@@ -2,7 +2,7 @@ package com.hotdeal.reservation.payment.processor;
 
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentType;
-import com.hotdeal.reservation.payment.client.PgClient;
+import com.hotdeal.reservation.payment.client.CardPgClient;
 import com.hotdeal.reservation.payment.client.PgException;
 import com.hotdeal.reservation.user.User;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CreditCardProcessor implements PaymentProcessor {
 
-    private final PgClient pgClient;
+    private final CardPgClient cardPgClient;
 
     @Override
     @Retryable(
@@ -24,7 +24,7 @@ public class CreditCardProcessor implements PaymentProcessor {
     )
     public void process(String idempotencyKey, User user, long amount) {
         try {
-            pgClient.charge(idempotencyKey, amount);
+            cardPgClient.charge(idempotencyKey, amount);
         } catch (PgException e) {
             if (!e.isRetryable()) {
                 throw new BadRequestException(e.getMessage());
