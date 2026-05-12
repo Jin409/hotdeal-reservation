@@ -7,6 +7,7 @@ import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentService;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.queue.QueueRedisRepository;
+import com.hotdeal.reservation.queue.QueueService;
 import com.hotdeal.reservation.stock.StockService;
 import com.hotdeal.reservation.user.User;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class BookingService {
     private final PaymentService paymentService;
     private final StockService stockService;
     private final QueueRedisRepository queueRedisRepository;
+    private final QueueService queueService;
     private final BookingCommandService bookingCommandService;
 
     @Transactional
@@ -38,6 +40,7 @@ public class BookingService {
             paymentService.pay(bookingId, user, request.paymentMethods(), product.getPrice());
             product.decreaseStock();
             booking.confirm();
+            queueService.leave(product.getId(), userId);
         } catch (Exception e) {
             stockService.rollback(product.getId());
             bookingCommandService.cancel(bookingId);

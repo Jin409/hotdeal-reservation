@@ -22,4 +22,9 @@ public class QueueService {
     public void removeEntry(Long productId, Long userId) {
         queueRedisRepository.removeEntry(productId, userId);
     }
+
+    public void leave(Long productId, Long userId) {
+        queueRedisRepository.popFirst(productId);
+        queueRedisRepository.removeEntry(productId, userId);
+    }
 }

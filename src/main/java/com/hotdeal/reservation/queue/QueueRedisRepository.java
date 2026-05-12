@@ -23,6 +23,10 @@ public class QueueRedisRepository {
         redisTemplate.opsForSet().remove(QueueKeys.entered(productId), userId.toString());
     }
 
+    public void popFirst(Long productId) {
+        redisTemplate.opsForList().leftPop(QueueKeys.queue(productId));
+    }
+
     public Long getRank(Long productId, Long userId) {
         Long index = redisTemplate.opsForList().indexOf(QueueKeys.queue(productId), userId.toString());
         if (index == null) {
