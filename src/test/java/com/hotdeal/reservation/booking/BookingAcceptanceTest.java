@@ -72,9 +72,9 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .header("Idempotency-Key", UUID.randomUUID().toString())
                 .body(request)
-        .when()
+                .when()
                 .post("/bookings/{bookingId}", booking.getId())
-        .then()
+                .then()
                 .statusCode(200)
                 .body("bookingId", notNullValue())
                 .body("status", equalTo("CONFIRMED"));
@@ -93,9 +93,9 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .header("Idempotency-Key", idempotencyKey)
                 .body(request)
-        .when()
+                .when()
                 .post("/bookings/{bookingId}", booking.getId())
-        .then()
+                .then()
                 .statusCode(200)
                 .body("status", equalTo("CONFIRMED"));
 
@@ -104,9 +104,9 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .header("Idempotency-Key", idempotencyKey)
                 .body(request)
-        .when()
+                .when()
                 .post("/bookings/{bookingId}", booking.getId())
-        .then()
+                .then()
                 .statusCode(200)
                 .body("status", equalTo("CONFIRMED"));
     }
@@ -123,9 +123,9 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .header("Idempotency-Key", UUID.randomUUID().toString())
                 .body(request)
-        .when()
+                .when()
                 .post("/bookings/{bookingId}", booking.getId())
-        .then()
+                .then()
                 .statusCode(400);
     }
 
@@ -143,9 +143,9 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .header("Idempotency-Key", idempotencyKey)
                 .body(failRequest)
-        .when()
+                .when()
                 .post("/bookings/{bookingId}", booking.getId())
-        .then()
+                .then()
                 .statusCode(400);
 
         // 같은 키로 올바른 금액으로 재시도
@@ -159,9 +159,9 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .header("Idempotency-Key", idempotencyKey)
                 .body(retryRequest)
-        .when()
+                .when()
                 .post("/bookings/{bookingId}", booking.getId())
-        .then()
+                .then()
                 .statusCode(200)
                 .body("status", equalTo("CONFIRMED"));
     }
@@ -180,14 +180,59 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .header("Idempotency-Key", idempotencyKey)
                 .body(request)
-        .when()
+                .when()
                 .post("/bookings/{bookingId}", booking.getId())
-        .then()
+                .then()
                 .statusCode(409);
     }
 
     @Test
-    void 멱등키_없이_요청하면_400을_반환한다() {
+    void 멱등키_없이_요청해도_결제가_정상_처리된다() {
+        BookingRequest request = new BookingRequest(product.getId(), List.of(
+                new PaymentMethodRequest("CREDIT_CARD", 50000),
+                new PaymentMethodRequest("YPOINT", 50000)
+        ));
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("userId", user.getId())
+                .body(request)
+                .when()
+                .post("/bookings/{bookingId}", booking.getId())
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("CONFIRMED"));
+    }
+
+    @Test
+    void 멱등키_없이_같은_예약에_두번_요청하면_두번째는_이미_완료된_예약으로_400을_반환한다() {
+        BookingRequest request = new BookingRequest(product.getId(), List.of(
+                new PaymentMethodRequest("CREDIT_CARD", 50000),
+                new PaymentMethodRequest("YPOINT", 50000)
+        ));
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("userId", user.getId())
+                .body(request)
+                .when()
+                .post("/bookings/{bookingId}", booking.getId())
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("CONFIRMED"));
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("userId", user.getId())
+                .body(request)
+                .when()
+                .post("/bookings/{bookingId}", booking.getId())
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void 존재하지_않는_bookingId로_요청하면_404를_반환한다() {
         BookingRequest request = new BookingRequest(product.getId(), List.of(
                 new PaymentMethodRequest("CREDIT_CARD", 100000)
         ));
@@ -195,11 +240,12 @@ class BookingAcceptanceTest extends AcceptanceTest {
         given()
                 .contentType(ContentType.JSON)
                 .header("userId", user.getId())
+                .header("Idempotency-Key", UUID.randomUUID().toString())
                 .body(request)
-        .when()
-                .post("/bookings/{bookingId}", booking.getId())
-        .then()
-                .statusCode(400);
+                .when()
+                .post("/bookings/{bookingId}", 999)
+                .then()
+                .statusCode(404);
     }
 
     @Test
@@ -213,9 +259,9 @@ class BookingAcceptanceTest extends AcceptanceTest {
                 .header("userId", user.getId())
                 .header("Idempotency-Key", UUID.randomUUID().toString())
                 .body(request)
-        .when()
+                .when()
                 .post("/bookings/{bookingId}", booking.getId())
-        .then()
+                .then()
                 .statusCode(400);
     }
 }
