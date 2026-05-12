@@ -17,14 +17,16 @@ public class StockService {
     private final ProductRepository productRepository;
 
     @Transactional
-    public void decrease(Long productId) {
+    public boolean decrease(Long productId) {
         try {
             decreaseByRedis(productId);
+            return true;
         } catch (BadRequestException e) {
             throw e;
         } catch (Exception e) {
             log.warn("Redis 재고 차감 실패. DB 비관적 락으로 전환합니다.", e);
             decreaseByDb(productId);
+            return false;
         }
     }
 

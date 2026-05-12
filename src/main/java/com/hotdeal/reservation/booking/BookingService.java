@@ -37,11 +37,13 @@ public class BookingService {
 
         validateBookingStatus(booking);
         validateIsFirstInLine(product.getId(), userId);
-        stockService.decrease(product.getId());
+        boolean decreasedByRedis = stockService.decrease(product.getId());
 
         try {
             paymentService.pay(bookingId, user, request.paymentMethods(), product.getPrice());
-            product.decreaseStock();
+            if (decreasedByRedis) {
+                product.decreaseStock();
+            }
             booking.confirm();
             leaveQueue(product.getId(), userId);
         } catch (Exception e) {
