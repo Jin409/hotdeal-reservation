@@ -162,6 +162,27 @@ class BookingServiceTest extends ServiceTest {
         assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10");
     }
 
+    @Test
+    void 이미_완료된_예약에_다시_결제하면_예외가_발생한다() {
+        Product product = createProduct(10);
+        User user = createUser("홍길동", 100000L);
+        Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
+        stockRedisRepository.set(product.getId(), 10);
+        queueService.enter(product.getId(), user.getId());
+
+        BookingRequest request = new BookingRequest(product.getId(), List.of(
+                new PaymentMethodRequest("CREDIT_CARD", 100000)
+        ));
+
+        bookingService.book(user.getId(), booking.getId(), request);
+
+        queueService.enter(product.getId(), user.getId());
+
+        assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("이미 완료된 예약");
+    }
+
     private Product createProduct(int stock) {
         return productRepository.save(
                 new Product("제주 호텔", 100000, stock,

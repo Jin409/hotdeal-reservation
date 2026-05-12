@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -17,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
+@Slf4j
 @Aspect
 @Component
 @RequiredArgsConstructor
@@ -28,13 +30,23 @@ public class IdempotencyAspect {
     @Around("@annotation(Idempotent)")
     public Object handleIdempotency(ProceedingJoinPoint joinPoint) throws Throwable {
         String key = extractIdempotencyKey();
-
-        Optional<ResponseEntity<Object>> cachedResponse = findCachedResponse(key);
-        if (cachedResponse.isPresent()) {
-            return cachedResponse.get();
+        if (key == null) {
+            return joinPoint.proceed();
         }
 
-        acquireProcessingLock(key);
+        try {
+            Optional<ResponseEntity<Object>> cachedResponse = findCachedResponse(key);
+            if (cachedResponse.isPresent()) {
+                return cachedResponse.get();
+            }
+
+            acquireProcessingLock(key);
+        } catch (BadRequestException | ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Redis 장애가 발생해 멱등성 확인을 생략합니다.", e);
+            return joinPoint.proceed();
+        }
 
         return executeAndCacheResponse(key, joinPoint);
     }
@@ -65,12 +77,20 @@ public class IdempotencyAspect {
             Object result = joinPoint.proceed();
 
             if (result instanceof ResponseEntity<?> responseEntity) {
-                idempotencyStore.save(key, serialize(responseEntity.getBody()));
+                try {
+                    idempotencyStore.save(key, serialize(responseEntity.getBody()));
+                } catch (Exception e) {
+                    log.warn("Redis 멱등성 응답 캐싱 실패.", e);
+                }
             }
 
             return result;
         } catch (Exception e) {
-            idempotencyStore.delete(key);
+            try {
+                idempotencyStore.delete(key);
+            } catch (Exception redisEx) {
+                log.warn("Redis 멱등성 키 삭제 실패.", redisEx);
+            }
             throw e;
         }
     }
@@ -84,7 +104,7 @@ public class IdempotencyAspect {
         HttpServletRequest request = attrs.getRequest();
         String key = request.getHeader("Idempotency-Key");
         if (key == null || key.isBlank()) {
-            throw new BadRequestException("Idempotency-Key 헤더가 필요합니다.");
+            return null;
         }
 
         return key;
