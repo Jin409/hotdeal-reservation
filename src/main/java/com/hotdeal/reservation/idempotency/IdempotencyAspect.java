@@ -30,6 +30,9 @@ public class IdempotencyAspect {
     @Around("@annotation(Idempotent)")
     public Object handleIdempotency(ProceedingJoinPoint joinPoint) throws Throwable {
         String key = extractIdempotencyKey();
+        if (key == null) {
+            return joinPoint.proceed();
+        }
 
         try {
             Optional<ResponseEntity<Object>> cachedResponse = findCachedResponse(key);
@@ -101,7 +104,7 @@ public class IdempotencyAspect {
         HttpServletRequest request = attrs.getRequest();
         String key = request.getHeader("Idempotency-Key");
         if (key == null || key.isBlank()) {
-            throw new BadRequestException("Idempotency-Key 헤더가 필요합니다.");
+            return null;
         }
 
         return key;
