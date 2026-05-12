@@ -21,7 +21,7 @@ import static org.mockito.BDDMockito.given;
 
 @SpringBootTest
 @Import(EmbeddedRedisConfig.class)
-class StockServiceFallbackTest {
+class StockServiceRedisFallbackTest {
 
     @Autowired
     private StockService stockService;
