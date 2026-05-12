@@ -15,19 +15,15 @@ public class StockService {
 
     private final StockRedisRepository stockRedisRepository;
     private final ProductRepository productRepository;
+    private final RedisHealthChecker redisHealthChecker;
 
     @Transactional
     public boolean decrease(Long productId) {
-        try {
-            decreaseByRedis(productId);
-            return true;
-        } catch (BadRequestException e) {
-            throw e;
-        } catch (Exception e) {
-            log.warn("Redis 재고 차감 실패. DB 비관적 락으로 전환합니다.", e);
-            decreaseByDb(productId);
-            return false;
+        if (!redisHealthChecker.isRedisAvailable()) {
+            return decreaseWithDbFallback(productId);
         }
+
+        return decreaseWithRedis(productId);
     }
 
     public void rollback(Long productId) {
@@ -36,6 +32,24 @@ public class StockService {
         } catch (Exception e) {
             log.warn("Redis 재고 롤백 실패.", e);
         }
+    }
+
+    private boolean decreaseWithRedis(Long productId) {
+        try {
+            decreaseByRedis(productId);
+            return true;
+        } catch (BadRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Redis 재고 차감 실패. DB 비관적 락으로 전환합니다.", e);
+            return decreaseWithDbFallback(productId);
+        }
+    }
+
+    private boolean decreaseWithDbFallback(Long productId) {
+        log.warn("Redis 사용 불가. DB 비관적 락으로 재고를 차감합니다.");
+        decreaseByDb(productId);
+        return false;
     }
 
     private void decreaseByRedis(Long productId) {

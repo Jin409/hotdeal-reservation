@@ -1,6 +1,5 @@
 package com.hotdeal.reservation.stock;
 
-import com.hotdeal.reservation.product.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -12,17 +11,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class StockInitializer implements ApplicationRunner {
 
-    private final ProductRepository productRepository;
-    private final StockRedisRepository stockRedisRepository;
+    private final StockSynchronizer stockSynchronizer;
 
     @Override
     public void run(ApplicationArguments args) {
         try {
-            productRepository.findAll().forEach(product ->
-                    stockRedisRepository.set(product.getId(), product.getStock().getQuantity())
-            );
+            stockSynchronizer.syncAll();
         } catch (Exception e) {
-            log.warn("Redis 재고 초기화 실패. Redis 복구 후 재기동이 필요합니다.", e);
+            log.warn("Redis 재고 초기화 실패. Redis 복구 후 자동 동기화됩니다.", e);
         }
     }
 }
