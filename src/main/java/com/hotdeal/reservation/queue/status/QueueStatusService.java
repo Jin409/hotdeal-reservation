@@ -3,14 +3,17 @@ package com.hotdeal.reservation.queue.status;
 import com.hotdeal.reservation.booking.Booking;
 import com.hotdeal.reservation.booking.BookingRepository;
 import com.hotdeal.reservation.booking.BookingStatus;
-import com.hotdeal.reservation.common.exception.NotFoundException;
 import com.hotdeal.reservation.common.exception.BadRequestException;
+import com.hotdeal.reservation.common.exception.NotFoundException;
+import com.hotdeal.reservation.common.exception.ServiceUnavailableException;
 import com.hotdeal.reservation.queue.QueueRedisRepository;
 import com.hotdeal.reservation.queue.QueueService;
 import com.hotdeal.reservation.stock.StockRedisRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class QueueStatusService {
@@ -23,7 +26,7 @@ public class QueueStatusService {
     private final StockRedisRepository stockRedisRepository;
 
     public QueueStatusResponse getStatus(Long productId, Long userId) {
-        Long rank = queueRedisRepository.getRank(productId, userId);
+        Long rank = getRank(productId, userId);
 
         if (rank == null) {
             return handleNotInQueue(productId, userId);
@@ -36,6 +39,15 @@ public class QueueStatusService {
         return QueueStatusResponse.waiting(rank);
     }
 
+    private Long getRank(Long productId, Long userId) {
+        try {
+            return queueRedisRepository.getRank(productId, userId);
+        } catch (Exception e) {
+            log.warn("Redis 장애로 대기열 순번 조회를 할 수 없습니다.", e);
+            throw new ServiceUnavailableException("대기열 서비스가 일시적으로 불안정합니다.");
+        }
+    }
+
     private QueueStatusResponse handleNotInQueue(Long productId, Long userId) {
         Booking booking = bookingRepository.findByProductIdAndUserId(productId, userId)
                 .orElseThrow(() -> new NotFoundException("대기열 내의 사용자"));
@@ -44,10 +56,10 @@ public class QueueStatusService {
             return QueueStatusResponse.completed();
         }
 
-        return tryReEnter(productId, userId);
+        return reEnter(productId, userId);
     }
 
-    private QueueStatusResponse tryReEnter(Long productId, Long userId) {
+    private QueueStatusResponse reEnter(Long productId, Long userId) {
         if (!hasStock(productId)) {
             throw new BadRequestException("재고가 없습니다.");
         }
