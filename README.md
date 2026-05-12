@@ -91,3 +91,210 @@ Docker 없이 실행됩니다. H2(인메모리 DB)와 Embedded Redis를 사용�
 | `local` (기본) | H2 MODE=MySQL | 비활성화 | 로컬 개발 |
 | `prod` | MySQL (Docker) | Redis (Docker) | 실제 실행 |
 | `test` | H2 MODE=MySQL | Embedded Redis | 테스트 |
+
+---
+
+## 사용자 흐름
+
+![모바일 화면 흐름](docs/reservation_1.png)
+
+| 화면 | API | 설명 |
+|---|---|---|
+| 주문서 진입 | `GET /checkout` | 상품 정보 조회 + 대기열 진입 + 순번 확인 |
+| 대기열 폴링 | `GET /queue-status` | 내 순번 확인, 결제 가능 여부 판단 |
+| 예약 완료 | `POST /bookings/{id}` | 결제 처리 + 예약 확정 |
+
+---
+
+## 시퀀스 다이어그램
+
+### 전체 예약 플로우
+
+```mermaid
+sequenceDiagram
+    actor 사용자
+    participant 주문서 as GET /checkout
+    participant 폴링 as GET /queue-status
+    participant 결제 as POST /bookings/{id}
+    participant Redis
+    participant DB
+
+    사용자->>주문서: 주문서 진입
+    주문서->>DB: 상품 정보 + 포인트 조회
+    주문서->>주문서: 재고 확인
+    주문서->>Redis: 대기열 진입
+    주문서->>Redis: 클라이언트 멱등키 발급
+    주문서->>DB: 예약 생성 (WAITING)
+    주문서-->>사용자: 상품 정보 + 순번 + 클라이언트 멱등키
+
+    loop 3~5초 간격 폴링
+        사용자->>폴링: 내 순번 확인
+        폴링->>Redis: 순번 조회
+        alt 아직 내 차례가 아님
+            폴링-->>사용자: WAITING (순번 N)
+        else 내 차례
+            폴링-->>사용자: READY
+        end
+    end
+
+    사용자->>결제: 결제 요청 (클라이언트 멱등키 포함)
+    결제->>결제: 클라이언트 멱등키 중복 확인
+    결제->>Redis: 순번 1등 검증
+    결제->>Redis: 재고 감소 (원자적)
+    결제->>결제: 결제 처리 (PG사 호출)
+    결제->>DB: 재고 차감 + 결제 저장 + 예약 확정
+    결제->>Redis: 대기열에서 제거
+    결제-->>사용자: CONFIRMED
+
+    사용자->>폴링: 상태 확인
+    폴링-->>사용자: COMPLETED
+```
+
+### 복합결제 처리 순서
+
+```mermaid
+sequenceDiagram
+    participant 결제서비스 as PaymentService
+    participant 카드 as 카드 PG사
+    participant 포인트 as 포인트 잔액
+
+    Note over 결제서비스: 검증 단계
+    결제서비스->>결제서비스: 결제 조합 검증 (카드+Y페이 혼용 차단)
+    결제서비스->>결제서비스: 총 금액 == 상품 가격 확인
+    결제서비스->>결제서비스: 포인트 잔액 충분한지 확인
+
+    Note over 결제서비스: 외부 결제 먼저
+    결제서비스->>카드: 카드 결제 요청 (PG 멱등키 포함)
+    카드-->>결제서비스: 성공
+
+    Note over 결제서비스: 포인트 차감 나중
+    결제서비스->>포인트: 포인트 차감
+    Note over 결제서비스: 카드 실패 시 포인트를 건드리지 않아<br/>롤백 불필요
+```
+
+### 동시 요청 시 재고 선점
+
+```mermaid
+sequenceDiagram
+    participant 서버1 as App Server 1
+    participant 서버2 as App Server 2
+    participant Redis
+
+    Note over Redis: 재고: 1개 남음
+
+    서버1->>Redis: 재고 감소 (원자적)
+    Redis-->>서버1: 0 (성공)
+
+    서버2->>Redis: 재고 감소 (원자적)
+    Redis-->>서버2: -1 (실패)
+    서버2->>Redis: 재고 원복
+    서버2-->>서버2: 재고 없음 응답
+
+    Note over Redis: 재고: 0<br/>서버1만 성공, 초과판매 없음
+```
+
+### 결제 실패 시 보상 트랜잭션
+
+```mermaid
+sequenceDiagram
+    participant 예약서비스
+    participant 재고 as Redis 재고
+    participant PG사
+    participant DB
+
+    예약서비스->>재고: 재고 감소
+    재고-->>예약서비스: 성공
+
+    예약서비스->>PG사: 결제 요청
+    PG사-->>예약서비스: 카드 거절 (NonRetryable)
+
+    Note over 예약서비스: 보상 트랜잭션 시작
+    예약서비스->>재고: 재고 원복
+    예약서비스->>DB: 예약 상태 → CANCELLED (별도 트랜잭션)
+    예약서비스->>예약서비스: 클라이언트 멱등키 삭제 (재시도 허용)
+    예약서비스-->>예약서비스: 에러 반환
+```
+
+### 결제 재시도 (PG사 일시 장애)
+
+```mermaid
+sequenceDiagram
+    participant 결제처리기
+    participant PG사
+
+    결제처리기->>PG사: 1차 결제 요청
+    PG사-->>결제처리기: 일시 장애 (Retryable)
+
+    Note over 결제처리기: 1초 대기
+
+    결제처리기->>PG사: 2차 결제 요청 (동일 PG 멱등키)
+    PG사-->>결제처리기: 일시 장애 (Retryable)
+
+    Note over 결제처리기: 2초 대기
+
+    결제처리기->>PG사: 3차 결제 요청 (동일 PG 멱등키)
+    alt 성공
+        PG사-->>결제처리기: 성공
+    else 최종 실패
+        PG사-->>결제처리기: 실패
+        Note over 결제처리기: 보상 트랜잭션 실행<br/>(재고 원복 + 예약 취소)
+    end
+```
+
+### Redis 장애 시 Checkout
+
+```mermaid
+sequenceDiagram
+    actor 사용자
+    participant 주문서 as GET /checkout
+    participant Redis
+    participant DB
+
+    Note over Redis: Redis 장애 상황
+
+    사용자->>주문서: 주문서 진입
+    주문서->>DB: 상품 정보 + 포인트 조회
+    주문서->>주문서: 재고 확인
+
+    주문서->>Redis: 대기열 진입 시도
+    Redis-->>주문서: 연결 실패 → 건너뜀
+
+    주문서->>Redis: 클라이언트 멱등키 발급 시도
+    Redis-->>주문서: 연결 실패 → 건너뜀
+
+    주문서->>DB: 예약 생성 (WAITING)
+    주문서-->>사용자: 상품 정보 + bookingId (순번 없음, 클라이언트 멱등키 없음)
+```
+
+### Redis 장애 시 결제
+
+```mermaid
+sequenceDiagram
+    actor 사용자
+    participant 결제 as POST /bookings/{id}
+    participant Redis
+    participant DB
+
+    Note over Redis: Redis 장애 상황
+
+    사용자->>결제: 결제 요청 (멱등키 없이)
+    결제->>결제: 클라이언트 멱등키 없음 → 멱등성 체크 건너뜀
+    결제->>DB: 예약 조회 → WAITING 확인
+
+    결제->>Redis: 순번 검증 시도
+    Redis-->>결제: 연결 실패 → 건너뜀
+
+    결제->>Redis: 재고 감소 시도
+    Redis-->>결제: 연결 실패
+    Note over 결제: DB 비관적 락으로 전환
+    결제->>DB: 재고 조회 (락 획득) + 차감
+
+    결제->>결제: 결제 처리 (PG사 호출)
+    결제->>DB: 결제 저장 + 예약 확정 (CONFIRMED)
+    결제-->>사용자: CONFIRMED
+
+    Note over 결제: 중복 요청 방어
+    사용자->>결제: 같은 bookingId로 재요청
+    결제->>DB: 예약 조회 → 이미 CONFIRMED
+    결제-->>사용자: 400 (이미 완료된 예약)
+```
