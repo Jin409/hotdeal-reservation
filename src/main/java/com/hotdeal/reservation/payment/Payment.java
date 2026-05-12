@@ -36,4 +36,8 @@ public class Payment {
         this.status = PaymentStatus.PENDING;
         this.createdAt = LocalDateTime.now();
     }
+
+    public void succeed() {
+        this.status = PaymentStatus.SUCCESS;
+    }
 }
