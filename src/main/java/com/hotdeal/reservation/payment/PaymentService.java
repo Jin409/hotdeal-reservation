@@ -18,19 +18,53 @@ import java.util.stream.Collectors;
 public class PaymentService {
 
     private final PaymentProcessorFactory processorFactory;
+    private final PaymentRepository paymentRepository;
+    private final PaymentItemRepository paymentItemRepository;
 
     public void pay(Long bookingId, User user, List<PaymentMethodRequest> paymentMethods, long productPrice) {
+        validate(paymentMethods, productPrice, user);
+
+        Payment payment = paymentRepository.save(new Payment(bookingId, productPrice));
+        processPayments(bookingId, user, paymentMethods);
+
+        savePaymentItems(payment.getId(), paymentMethods);
+        payment.succeed();
+    }
+
+    private void validate(List<PaymentMethodRequest> paymentMethods, long productPrice, User user) {
         validatePaymentCombination(paymentMethods);
         validateTotalAmountMatchesPrice(paymentMethods, productPrice);
         validateHasEnoughPoint(paymentMethods, user);
-
-        String pgIdempotencyKey = generatePgIdempotencyKey(bookingId);
-        processExternalPayments(pgIdempotencyKey, user, paymentMethods);
-        processPointPayment(pgIdempotencyKey, user, paymentMethods);
     }
 
-    private String generatePgIdempotencyKey(Long bookingId) {
-        return "pg:" + bookingId + ":" + UUID.randomUUID();
+    private void processPayments(Long bookingId, User user, List<PaymentMethodRequest> paymentMethods) {
+        String pgIdempotencyKey = generatePgIdempotencyKey(bookingId);
+        processExternalPayments(pgIdempotencyKey, user, paymentMethods);
+        usePoints(user, paymentMethods);
+    }
+
+    private void processExternalPayments(String idempotencyKey, User user, List<PaymentMethodRequest> paymentMethods) {
+        paymentMethods.stream()
+                .filter(pm -> !isPoint(pm))
+                .forEach(pm -> {
+                    PaymentType type = PaymentType.valueOf(pm.type());
+                    PaymentProcessor processor = processorFactory.getProcessor(type);
+                    processor.process(idempotencyKey, user, pm.amount());
+                });
+    }
+
+    private void usePoints(User user, List<PaymentMethodRequest> paymentMethods) {
+        long pointAmount = calculatePointToUse(paymentMethods);
+        if (pointAmount > 0) {
+            user.usePoints(pointAmount);
+        }
+    }
+
+    private void savePaymentItems(Long paymentId, List<PaymentMethodRequest> paymentMethods) {
+        paymentMethods.forEach(pm -> {
+            PaymentType type = PaymentType.valueOf(pm.type());
+            paymentItemRepository.save(new PaymentItem(paymentId, type, pm.amount()));
+        });
     }
 
     private void validatePaymentCombination(List<PaymentMethodRequest> paymentMethods) {
@@ -58,22 +92,8 @@ public class PaymentService {
         }
     }
 
-    private void processExternalPayments(String idempotencyKey, User user, List<PaymentMethodRequest> paymentMethods) {
-        paymentMethods.stream()
-                .filter(pm -> !isPoint(pm))
-                .forEach(pm -> execute(idempotencyKey, user, pm));
-    }
-
-    private void processPointPayment(String idempotencyKey, User user, List<PaymentMethodRequest> paymentMethods) {
-        paymentMethods.stream()
-                .filter(this::isPoint)
-                .forEach(pm -> execute(idempotencyKey, user, pm));
-    }
-
-    private void execute(String idempotencyKey, User user, PaymentMethodRequest pm) {
-        PaymentType type = PaymentType.valueOf(pm.type());
-        PaymentProcessor processor = processorFactory.getProcessor(type);
-        processor.process(idempotencyKey, user, pm.amount());
+    private String generatePgIdempotencyKey(Long bookingId) {
+        return "pg:" + bookingId + ":" + UUID.randomUUID();
     }
 
     private boolean isPoint(PaymentMethodRequest pm) {

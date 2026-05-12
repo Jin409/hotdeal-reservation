@@ -5,6 +5,9 @@ import com.hotdeal.reservation.booking.dto.BookingResponse;
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.ServiceTest;
 import com.hotdeal.reservation.common.exception.BadRequestException;
+import com.hotdeal.reservation.payment.PaymentItemRepository;
+import com.hotdeal.reservation.payment.PaymentRepository;
+import com.hotdeal.reservation.payment.PaymentStatus;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.queue.QueueService;
@@ -46,6 +49,12 @@ class BookingServiceTest extends ServiceTest {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private PaymentItemRepository paymentItemRepository;
+
     @Test
     void 예약_성공시_CONFIRMED_상태가_된다() {
         Product product = createProduct(10);
@@ -65,7 +74,10 @@ class BookingServiceTest extends ServiceTest {
         assertAll(
                 () -> assertThat(response.status()).isEqualTo(BookingStatus.CONFIRMED),
                 () -> assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("9"),
-                () -> assertThat(updatedUser.getPointBalance()).isEqualTo(0L)
+                () -> assertThat(updatedUser.getPointBalance()).isEqualTo(0L),
+                () -> assertThat(paymentRepository.findAll()).hasSize(1),
+                () -> assertThat(paymentRepository.findAll().get(0).getStatus()).isEqualTo(PaymentStatus.SUCCESS),
+                () -> assertThat(paymentItemRepository.findAll()).hasSize(2)
         );
     }
 
@@ -117,10 +129,8 @@ class BookingServiceTest extends ServiceTest {
                 new PaymentMethodRequest("YPOINT", 50000)
         ));
 
-        try {
-            bookingService.book(user.getId(), booking.getId(), request);
-        } catch (BadRequestException ignored) {
-        }
+        assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
+                .isInstanceOf(BadRequestException.class);
 
         assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10");
     }

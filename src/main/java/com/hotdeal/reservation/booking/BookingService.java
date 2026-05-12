@@ -23,6 +23,7 @@ public class BookingService {
     private final PaymentService paymentService;
     private final StockService stockService;
     private final QueueRedisRepository queueRedisRepository;
+    private final BookingCommandService bookingCommandService;
 
     @Transactional
     public BookingResponse book(Long userId, Long bookingId, BookingRequest request) {
@@ -39,6 +40,7 @@ public class BookingService {
             booking.confirm();
         } catch (Exception e) {
             stockService.rollback(product.getId());
+            bookingCommandService.cancel(bookingId);
             throw e;
         }
 

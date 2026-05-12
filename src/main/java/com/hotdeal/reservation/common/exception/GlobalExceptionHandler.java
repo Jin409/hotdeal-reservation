@@ -1,5 +1,6 @@
 package com.hotdeal.reservation.common.exception;
 
+import com.hotdeal.reservation.payment.client.PgException;
 import com.hotdeal.reservation.queue.DuplicateEntryException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateEntryException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateEntry(DuplicateEntryException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(e.getMessage()));
+    }
+
+    @ExceptionHandler(PgException.class)
+    public ResponseEntity<ErrorResponse> handlePgException(PgException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(e.getMessage()));
     }
 }

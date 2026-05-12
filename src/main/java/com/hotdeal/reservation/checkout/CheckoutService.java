@@ -31,8 +31,8 @@ public class CheckoutService {
         }
 
         Long rank = queueService.enter(productId, userId);
-        Booking booking = bookingRepository.save(Booking.waiting(userId, productId));
         String idempotencyKey = idempotencyStore.issue(productId + ":" + userId);
+        Booking booking = bookingRepository.save(Booking.waiting(userId, productId));
 
         return CheckoutResponse.of(product, user, rank, booking.getId(), idempotencyKey);
     }
