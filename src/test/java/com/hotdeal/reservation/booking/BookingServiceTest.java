@@ -10,6 +10,8 @@ import com.hotdeal.reservation.payment.PaymentRepository;
 import com.hotdeal.reservation.payment.PaymentStatus;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
+import com.hotdeal.reservation.queue.QueueKeys;
+import com.hotdeal.reservation.queue.QueueRedisRepository;
 import com.hotdeal.reservation.queue.QueueService;
 import com.hotdeal.reservation.stock.StockKeys;
 import com.hotdeal.reservation.stock.StockRedisRepository;
@@ -54,6 +56,9 @@ class BookingServiceTest extends ServiceTest {
 
     @Autowired
     private PaymentItemRepository paymentItemRepository;
+
+    @Autowired
+    private QueueRedisRepository queueRedisRepository;
 
     @Test
     void 예약_성공시_CONFIRMED_상태가_된다() {
@@ -114,6 +119,28 @@ class BookingServiceTest extends ServiceTest {
         assertThatThrownBy(() -> bookingService.book(secondUser.getId(), booking.getId(), request))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("순번");
+    }
+
+    @Test
+    void 예약_성공시_대기열에서_제거되고_다음_사람이_1등이_된다() {
+        Product product = createProduct(10);
+        User firstUser = createUser("첫번째", 100000L);
+        User secondUser = createUser("두번째", 100000L);
+        Booking booking = bookingRepository.save(Booking.waiting(firstUser.getId(), product.getId()));
+        stockRedisRepository.set(product.getId(), 10);
+        queueService.enter(product.getId(), firstUser.getId());
+        queueService.enter(product.getId(), secondUser.getId());
+
+        BookingRequest request = new BookingRequest(product.getId(), List.of(
+                new PaymentMethodRequest("CREDIT_CARD", 100000)
+        ));
+
+        bookingService.book(firstUser.getId(), booking.getId(), request);
+
+        assertAll(
+                () -> assertThat(queueRedisRepository.getRank(product.getId(), firstUser.getId())).isNull(),
+                () -> assertThat(queueRedisRepository.getRank(product.getId(), secondUser.getId())).isEqualTo(1L)
+        );
     }
 
     @Test
