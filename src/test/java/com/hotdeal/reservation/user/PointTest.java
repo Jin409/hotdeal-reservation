@@ -31,12 +31,16 @@ class PointTest {
     }
 
     @Test
-    void 잔액이_충분한지_확인한다() {
+    void 잔액이_딱_맞으면_충분하다고_판단한다() {
         Point point = new Point(50000);
 
-        assertAll(
-                () -> assertThat(point.hasEnough(50000)).isTrue(),
-                () -> assertThat(point.hasEnough(50001)).isFalse()
-        );
+        assertThat(point.hasEnough(50000)).isTrue();
+    }
+
+    @Test
+    void 잔액을_초과하면_부족하다고_판단한다() {
+        Point point = new Point(50000);
+
+        assertThat(point.hasEnough(50001)).isFalse();
     }
 }

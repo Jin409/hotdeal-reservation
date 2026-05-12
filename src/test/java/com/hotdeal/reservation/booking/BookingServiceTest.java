@@ -61,28 +61,32 @@ class BookingServiceTest extends ServiceTest {
     private QueueRedisRepository queueRedisRepository;
 
     @Test
-    void 예약_성공시_CONFIRMED_상태가_된다() {
+    void 예약_성공시_결제_처리되고_대기열에서_제거된다() {
         Product product = createProduct(10);
-        User user = createUser("홍길동", 50000L);
-        Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
+        User firstUser = createUser("첫번째", 50000L);
+        User secondUser = createUser("두번째", 100000L);
+        Booking booking = bookingRepository.save(Booking.waiting(firstUser.getId(), product.getId()));
         stockRedisRepository.set(product.getId(), 10);
-        queueService.enter(product.getId(), user.getId());
+        queueService.enter(product.getId(), firstUser.getId());
+        queueService.enter(product.getId(), secondUser.getId());
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(
                 new PaymentMethodRequest("CREDIT_CARD", 50000),
                 new PaymentMethodRequest("YPOINT", 50000)
         ));
 
-        BookingResponse response = bookingService.book(user.getId(), booking.getId(), request);
+        BookingResponse response = bookingService.book(firstUser.getId(), booking.getId(), request);
 
-        User updatedUser = userRepository.findById(user.getId()).get();
+        User updatedUser = userRepository.findById(firstUser.getId()).get();
         assertAll(
                 () -> assertThat(response.status()).isEqualTo(BookingStatus.CONFIRMED),
                 () -> assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("9"),
                 () -> assertThat(updatedUser.getPointBalance()).isEqualTo(0L),
                 () -> assertThat(paymentRepository.findAll()).hasSize(1),
                 () -> assertThat(paymentRepository.findAll().get(0).getStatus()).isEqualTo(PaymentStatus.SUCCESS),
-                () -> assertThat(paymentItemRepository.findAll()).hasSize(2)
+                () -> assertThat(paymentItemRepository.findAll()).hasSize(2),
+                () -> assertThat(queueRedisRepository.getRank(product.getId(), firstUser.getId())).isNull(),
+                () -> assertThat(queueRedisRepository.getRank(product.getId(), secondUser.getId())).isEqualTo(1L)
         );
     }
 
@@ -122,29 +126,7 @@ class BookingServiceTest extends ServiceTest {
     }
 
     @Test
-    void 예약_성공시_대기열에서_제거되고_다음_사람이_1등이_된다() {
-        Product product = createProduct(10);
-        User firstUser = createUser("첫번째", 100000L);
-        User secondUser = createUser("두번째", 100000L);
-        Booking booking = bookingRepository.save(Booking.waiting(firstUser.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 10);
-        queueService.enter(product.getId(), firstUser.getId());
-        queueService.enter(product.getId(), secondUser.getId());
-
-        BookingRequest request = new BookingRequest(product.getId(), List.of(
-                new PaymentMethodRequest("CREDIT_CARD", 100000)
-        ));
-
-        bookingService.book(firstUser.getId(), booking.getId(), request);
-
-        assertAll(
-                () -> assertThat(queueRedisRepository.getRank(product.getId(), firstUser.getId())).isNull(),
-                () -> assertThat(queueRedisRepository.getRank(product.getId(), secondUser.getId())).isEqualTo(1L)
-        );
-    }
-
-    @Test
-    void 결제_실패시_Redis_재고가_롤백된다() {
+    void 결제_실패시_재고가_롤백되고_Booking이_CANCELLED가_된다() {
         Product product = createProduct(10);
         User user = createUser("홍길동", 10000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
@@ -159,7 +141,11 @@ class BookingServiceTest extends ServiceTest {
         assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
                 .isInstanceOf(BadRequestException.class);
 
-        assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10");
+        Booking updated = bookingRepository.findById(booking.getId()).get();
+        assertAll(
+                () -> assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10"),
+                () -> assertThat(updated.getStatus()).isEqualTo(BookingStatus.CANCELLED)
+        );
     }
 
     @Test
