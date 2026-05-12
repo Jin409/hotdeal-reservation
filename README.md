@@ -298,3 +298,177 @@ sequenceDiagram
     결제->>DB: 예약 조회 → 이미 CONFIRMED
     결제-->>사용자: 400 (이미 완료된 예약)
 ```
+
+---
+
+## ERD
+
+```mermaid
+erDiagram
+    users {
+        bigint id PK
+        varchar name
+        varchar email
+        bigint point_balance
+    }
+
+    products {
+        bigint id PK
+        varchar name
+        bigint price
+        int stock
+        datetime check_in_at
+        datetime check_out_at
+        datetime created_at
+    }
+
+    bookings {
+        bigint id PK
+        bigint user_id FK
+        bigint product_id FK
+        varchar status
+        datetime created_at
+    }
+
+    payments {
+        bigint id PK
+        bigint booking_id FK
+        bigint total_amount
+        varchar status
+        datetime created_at
+    }
+
+    payment_items {
+        bigint id PK
+        bigint payment_id FK
+        varchar payment_type
+        bigint amount
+    }
+
+    users ||--o{ bookings : "예약"
+    products ||--o{ bookings : "상품"
+    bookings ||--|| payments : "결제"
+    payments ||--o{ payment_items : "결제 수단"
+```
+
+### 테이블 설명
+
+| 테이블 | 설명 |
+|---|---|
+| `users` | 사용자 정보. 포인트 잔액 포함 |
+| `products` | 숙소 상품. 재고(stock)는 Redis와 동기화하여 관리 |
+| `bookings` | 예약 내역. 상태: WAITING → CONFIRMED / CANCELLED |
+| `payments` | 결제 내역. 상태: PENDING → SUCCESS |
+| `payment_items` | 복합결제의 각 결제 수단별 금액 (카드 80,000 + 포인트 20,000 등) |
+
+---
+
+## API 목록
+
+### GET /checkout
+
+주문서 진입. 상품 정보 조회 + 대기열 진입 + 멱등키 발급.
+
+**Request**
+```
+GET /checkout?productId=1
+Header: userId: 1
+```
+
+**Response (200)**
+```json
+{
+  "bookingId": 1,
+  "idempotencyKey": "uuid-abc-123",
+  "productName": "제주 초특가 호텔",
+  "price": 100000,
+  "checkInAt": "2026-06-01T15:00:00",
+  "checkOutAt": "2026-06-02T11:00:00",
+  "pointBalance": 50000,
+  "rank": 1
+}
+```
+
+| 상태 코드 | 설명 |
+|---|---|
+| 200 | 정상 |
+| 400 | 재고 없음 |
+| 404 | 상품/사용자 없음 |
+| 409 | 이미 대기열에 진입한 사용자 |
+
+---
+
+### GET /queue-status
+
+대기열 상태 조회. 3~5초 간격으로 폴링.
+
+**Request**
+```
+GET /queue-status?productId=1
+Header: userId: 1
+```
+
+**Response (200)**
+```json
+{ "status": "WAITING", "rank": 5 }
+{ "status": "READY", "rank": 1 }
+{ "status": "COMPLETED", "rank": null }
+```
+
+| 상태 코드 | 설명 |
+|---|---|
+| 200 | 정상 (WAITING / READY / COMPLETED) |
+| 400 | 재고 없음 (재진입 불가) |
+| 404 | 대기열에 없는 사용자 |
+| 503 | Redis 장애로 조회 불가 |
+
+---
+
+### POST /bookings/{bookingId}
+
+결제 및 예약 완료.
+
+**Request**
+```
+POST /bookings/1
+Header: userId: 1
+Header: Idempotency-Key: uuid-abc-123
+Content-Type: application/json
+
+{
+  "productId": 1,
+  "paymentMethods": [
+    { "type": "CREDIT_CARD", "amount": 80000 },
+    { "type": "YPOINT", "amount": 20000 }
+  ]
+}
+```
+
+**Response (200)**
+```json
+{
+  "bookingId": 1,
+  "status": "CONFIRMED"
+}
+```
+
+| 상태 코드 | 설명 |
+|---|---|
+| 200 | 결제 성공 |
+| 400 | 결제 검증 실패 (혼용, 금액 불일치, 포인트 부족, 재고 없음, 순번 아님, 이미 완료) |
+| 404 | 예약 없음 |
+| 409 | 처리 중 (멱등키 충돌) |
+| 500 | PG사 장애 (재시도 모두 실패) |
+
+**지원 결제 수단**
+
+| 결제 수단 | 설명 |
+|---|---|
+| `CREDIT_CARD` | 신용카드 (PG사 호출) |
+| `YPAY` | Y페이 (PG사 호출) |
+| `YPOINT` | Y포인트 (내부 잔액 차감) |
+
+**복합결제 규칙**
+- 카드 + 포인트 ✅
+- Y페이 + 포인트 ✅
+- 카드 + Y페이 ❌ (혼용 불가)
