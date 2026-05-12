@@ -45,21 +45,11 @@ class QueueServiceTest extends ServiceTest {
     }
 
     @Test
-    void 동일_유저가_중복_진입하면_예외가_발생한다() {
+    void 동일_유저가_중복_진입하면_예외가_발생하고_대기열에_추가되지_않는다() {
         queueService.enter(1L, 10L);
 
         assertThatThrownBy(() -> queueService.enter(1L, 10L))
                 .isInstanceOf(DuplicateEntryException.class);
-    }
-
-    @Test
-    void 중복_진입_시_대기열에_추가되지_않는다() {
-        queueService.enter(1L, 10L);
-
-        try {
-            queueService.enter(1L, 10L);
-        } catch (DuplicateEntryException ignored) {
-        }
 
         Long size = redisTemplate.opsForList().size(QueueKeys.queue(1L));
         assertThat(size).isEqualTo(1L);

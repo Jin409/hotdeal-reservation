@@ -40,7 +40,7 @@ class CheckoutServiceTest extends ServiceTest {
     }
 
     @Test
-    void 상품_정보와_포인트_잔액과_순번을_조회한다() {
+    void 주문서_진입시_상품_정보와_순번을_반환하고_대기열에_추가된다() {
         Product product = productRepository.save(
                 new Product("제주 호텔", 100000, 10,
                         LocalDateTime.of(2026, 6, 1, 15, 0),
@@ -50,29 +50,16 @@ class CheckoutServiceTest extends ServiceTest {
 
         CheckoutResponse response = checkoutService.checkout(product.getId(), user.getId());
 
+        Long queueSize = redisTemplate.opsForList().size(QueueKeys.queue(product.getId()));
         assertAll(
                 () -> assertThat(response.productName()).isEqualTo("제주 호텔"),
                 () -> assertThat(response.price()).isEqualTo(100000),
                 () -> assertThat(response.pointBalance()).isEqualTo(50000L),
                 () -> assertThat(response.rank()).isEqualTo(1L),
                 () -> assertThat(response.bookingId()).isNotNull(),
-                () -> assertThat(response.idempotencyKey()).isNotNull()
+                () -> assertThat(response.idempotencyKey()).isNotNull(),
+                () -> assertThat(queueSize).isEqualTo(1L)
         );
-    }
-
-    @Test
-    void 주문서_진입시_대기열에_추가된다() {
-        Product product = productRepository.save(
-                new Product("제주 호텔", 100000, 10,
-                        LocalDateTime.of(2026, 6, 1, 15, 0),
-                        LocalDateTime.of(2026, 6, 2, 11, 0))
-        );
-        User user = userRepository.save(new User("홍길동", "hong@test.com", 50000L));
-
-        checkoutService.checkout(product.getId(), user.getId());
-
-        Long size = redisTemplate.opsForList().size(QueueKeys.queue(product.getId()));
-        assertThat(size).isEqualTo(1L);
     }
 
     @Test

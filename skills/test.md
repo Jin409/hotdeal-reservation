@@ -96,6 +96,11 @@ public class TestContainersConfig {
 - 데이터 초기화는 `@Sql(scripts = "/fixture.sql")`로 주입합니다.
 - fixture.sql 위치: `src/test/resources/fixture.sql`
 
+### Redis Fallback 테스트
+- `@MockitoBean`으로 Redis 관련 빈을 모킹하여 Redis 장애를 시뮬레이션합니다.
+- ServiceTest를 상속하지 않고 별도 `@SpringBootTest` + `@Import(EmbeddedRedisConfig.class)`로 구성합니다.
+- 클래스 네이밍: `XxxRedisFallbackTest` (예: `BookingRedisFallbackTest`, `StockServiceRedisFallbackTest`)
+
 ### 동시성 테스트 패턴
 - `CountDownLatch` + `ExecutorService`로 동시 요청을 시뮬레이션합니다.
 - 재고 10개 기준, 100명 동시 요청 시 정확히 10명만 성공하는지 검증합니다.
@@ -157,15 +162,80 @@ QueueStatusResponse pollUntilDone(Long bookingId)  // CONFIRMED or FAILED까지 
 
 ---
 
+## 예외 검증
+
+### 기본 원칙
+예외가 발생하는 케이스는 반드시 `assertThatThrownBy`로 검증합니다.
+`try-catch`로 예외를 무시(ignored)하는 방식은 **금지**합니다.
+
+```java
+// ✅ 올바른 예시
+assertThatThrownBy(() ->
+    bookingService.book(userId, bookingId, request)
+).isInstanceOf(BadRequestException.class);
+
+// ❌ 잘못된 예시 — 예외가 발생하지 않아도, 타입이 달라도 통과해버림
+try {
+    bookingService.book(userId, bookingId, request);
+} catch (BadRequestException ignored) { }
+```
+
+`try-catch ignored` 패턴이 위험한 이유:
+- 예외가 전혀 발생하지 않아도 테스트가 통과합니다.
+- 예외 타입이 변경되어도 테스트가 통과합니다.
+- "예외가 발생한다"는 명세 자체를 검증하지 않습니다.
+
+### 예외 + 상태변화 동시 검증
+
+예외가 발생하더라도 부수 효과(DB 상태변화 등)가 있다면 예외 검증 이후 이어서 상태도 검증합니다.
+**하나의 시나리오에서 발생하는 결과들은 분리하지 않아도 됩니다.**
+
+```java
+@Test
+void 카드_거절시_예외가_발생하고_Booking이_CANCELLED로_변경된다() {
+    // given
+    doThrow(new PgException(PgErrorCode.INVALID_REJECT_CARD))
+            .when(cardPgClient).charge(anyString(), anyLong());
+
+    // when & then — 예외 검증
+    assertThatThrownBy(() ->
+        bookingService.book(userId, bookingId, request)
+    ).isInstanceOf(BadRequestException.class);
+
+    // then — 상태변화 검증 (같은 시나리오의 일부이므로 함께 작성)
+    Booking updated = bookingRepository.findById(bookingId).get();
+    assertThat(updated.getStatus()).isEqualTo(BookingStatus.CANCELLED);
+}
+```
+
+### 언제 테스트를 분리하는가
+
+"하나의 시나리오, 하나의 테스트" 원칙을 따릅니다.
+예외 발생과 그에 따른 상태변화는 **같은 시나리오**이므로 함께 검증합니다.
+서로 다른 입력 조건이나 독립적인 시나리오는 별도의 테스트로 분리합니다.
+
+```java
+// ✅ 같은 시나리오 → 하나의 테스트
+void 카드_거절시_예외가_발생하고_Booking이_CANCELLED로_변경된다()
+
+// ✅ 다른 시나리오 → 별도의 테스트
+void 잔액_부족시_예약에_실패한다()
+void 카드_거절시_예약에_실패한다()
+```
+
+---
+
 ## 네이밍 컨벤션
 
 - 테스트 메서드명은 한글로 작성합니다.
 - `언더스코어`로 단어를 구분합니다.
+- 시나리오에서 발생하는 결과가 여러 개라면 메서드명에 모두 담을 필요 없이 핵심 행위 중심으로 작성합니다.
 
 ```
 ✅ 재고가_없으면_예약에_실패한다
 ✅ 동시에_100명이_요청해도_10명만_성공한다
 ✅ 동일_멱등성_키로_두번_요청하면_동일_응답을_반환한다
+✅ 카드_거절시_예약에_실패하고_Booking이_취소된다
 ❌ testBookingFailWhenSoldOut
 ```
 
