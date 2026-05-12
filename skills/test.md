@@ -96,6 +96,11 @@ public class TestContainersConfig {
 - 데이터 초기화는 `@Sql(scripts = "/fixture.sql")`로 주입합니다.
 - fixture.sql 위치: `src/test/resources/fixture.sql`
 
+### Redis Fallback 테스트
+- `@MockitoBean`으로 Redis 관련 빈을 모킹하여 Redis 장애를 시뮬레이션합니다.
+- ServiceTest를 상속하지 않고 별도 `@SpringBootTest` + `@Import(EmbeddedRedisConfig.class)`로 구성합니다.
+- 클래스 네이밍: `XxxRedisFallbackTest` (예: `BookingRedisFallbackTest`, `StockServiceRedisFallbackTest`)
+
 ### 동시성 테스트 패턴
 - `CountDownLatch` + `ExecutorService`로 동시 요청을 시뮬레이션합니다.
 - 재고 10개 기준, 100명 동시 요청 시 정확히 10명만 성공하는지 검증합니다.
