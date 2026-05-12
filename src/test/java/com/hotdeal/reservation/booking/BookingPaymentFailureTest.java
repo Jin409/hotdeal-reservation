@@ -4,6 +4,7 @@ import com.hotdeal.reservation.booking.dto.BookingRequest;
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.EmbeddedRedisConfig;
 import com.hotdeal.reservation.common.exception.BadRequestException;
+import com.hotdeal.reservation.payment.PaymentRepository;
 import com.hotdeal.reservation.payment.client.CardPgClient;
 import com.hotdeal.reservation.payment.client.PgErrorCode;
 import com.hotdeal.reservation.payment.client.PgException;
@@ -27,6 +28,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.doThrow;
@@ -48,6 +50,9 @@ class BookingPaymentFailureTest {
     private UserRepository userRepository;
 
     @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
     private StockRedisRepository stockRedisRepository;
 
     @Autowired
@@ -61,6 +66,7 @@ class BookingPaymentFailureTest {
 
     @AfterEach
     void cleanUp() {
+        paymentRepository.deleteAll();
         bookingRepository.deleteAll();
         productRepository.deleteAll();
         userRepository.deleteAll();
@@ -68,7 +74,7 @@ class BookingPaymentFailureTest {
     }
 
     @Test
-    void 카드_거절시_BadRequestException이_발생하고_재고가_롤백된다() {
+    void 카드_거절시_CANCELLED_상태로_변경되고_재고가_롤백된다() {
         Product product = createProduct(10);
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
@@ -85,11 +91,17 @@ class BookingPaymentFailureTest {
         assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
                 .isInstanceOf(BadRequestException.class);
 
-        assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10");
+        Booking updatedBooking = bookingRepository.findById(booking.getId()).get();
+        Product updatedProduct = productRepository.findById(product.getId()).get();
+        assertAll(
+                () -> assertThat(updatedBooking.getStatus()).isEqualTo(BookingStatus.CANCELLED),
+                () -> assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10"),
+                () -> assertThat(updatedProduct.getStock().getQuantity()).isEqualTo(10)
+        );
     }
 
     @Test
-    void PG사_일시장애시_재시도_후_최종_실패하면_재고가_롤백된다() {
+    void PG사_일시장애시_재시도_후_최종_실패하면_CANCELLED_상태로_변경되고_재고가_롤백된다() {
         Product product = createProduct(10);
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
@@ -106,7 +118,11 @@ class BookingPaymentFailureTest {
         assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
                 .isInstanceOf(PgException.class);
 
-        assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10");
+        Booking updatedBooking = bookingRepository.findById(booking.getId()).get();
+        assertAll(
+                () -> assertThat(updatedBooking.getStatus()).isEqualTo(BookingStatus.CANCELLED),
+                () -> assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10")
+        );
     }
 
     @Test
