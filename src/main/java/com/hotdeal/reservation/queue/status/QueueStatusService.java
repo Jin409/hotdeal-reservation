@@ -27,6 +27,8 @@ public class QueueStatusService {
     private final ProductRepository productRepository;
 
     public QueueStatusResponse getStatus(Long productId, Long userId) {
+        queueService.evictReadyExpiredUser(productId);
+
         Long rank = getRank(productId, userId);
 
         if (rank == null) {

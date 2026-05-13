@@ -53,10 +53,6 @@ public class QueueService {
         queueRedisRepository.removeEntry(productId, userId);
     }
 
-    public Long getRank(Long productId, Long userId) {
-        return queueRedisRepository.getRank(productId, userId);
-    }
-
     public void leave(Long productId, Long userId) {
         try {
             queueRedisRepository.popFirst(productId);
@@ -65,6 +61,24 @@ public class QueueService {
             markNextUserReady(productId);
         } catch (Exception e) {
             log.warn("대기열 제거에 실패하여 건너뜁니다.", e);
+        }
+    }
+
+    public void evictReadyExpiredUser(Long productId) {
+        try {
+            Long firstUserId = queueRedisRepository.getFirstUserId(productId);
+            if (firstUserId == null) {
+                return;
+            }
+
+            if (queueRedisRepository.isReady(productId, firstUserId)) {
+                return;
+            }
+
+            log.info("대기열 1번 사용자(userId={}) 결제 시간 만료. 대기열에서 제거합니다.", firstUserId);
+            leave(productId, firstUserId);
+        } catch (Exception e) {
+            log.warn("만료된 대기열 사용자 제거에 실패했습니다.", e);
         }
     }
 
