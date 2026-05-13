@@ -34,7 +34,16 @@ public class User {
         return point.getBalance();
     }
 
+    public void validatePointBalance(long amount) {
+        if (!point.hasEnough(amount)) {
+            throw new IllegalStateException("포인트 잔액이 부족합니다.");
+        }
+    }
+
     public void usePoints(long amount) {
+        if (amount <= 0) {
+            return;
+        }
         this.point = point.use(amount);
     }
 }

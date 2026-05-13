@@ -24,6 +24,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class IdempotencyAspect {
 
+    private static final String IDEMPOTENCY_KEY = "Idempotency-Key";
+
     private final IdempotencyStore idempotencyStore;
     private final ObjectMapper objectMapper;
 
@@ -39,12 +41,11 @@ public class IdempotencyAspect {
             if (cachedResponse.isPresent()) {
                 return cachedResponse.get();
             }
-
             acquireProcessingLock(key);
         } catch (BadRequestException | ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("Redis 장애가 발생해 멱등성 확인을 생략합니다.", e);
+            log.warn("멱등성 확인에 실패하여 생략합니다.", e);
             return joinPoint.proceed();
         }
 
@@ -75,23 +76,30 @@ public class IdempotencyAspect {
     private Object executeAndCacheResponse(String key, ProceedingJoinPoint joinPoint) throws Throwable {
         try {
             Object result = joinPoint.proceed();
-
-            if (result instanceof ResponseEntity<?> responseEntity) {
-                try {
-                    idempotencyStore.save(key, serialize(responseEntity.getBody()));
-                } catch (Exception e) {
-                    log.warn("Redis 멱등성 응답 캐싱 실패.", e);
-                }
-            }
-
+            cacheResponse(key, result);
             return result;
         } catch (Exception e) {
-            try {
-                idempotencyStore.delete(key);
-            } catch (Exception redisEx) {
-                log.warn("Redis 멱등성 키 삭제 실패.", redisEx);
-            }
+            deleteKeyQuietly(key);
             throw e;
+        }
+    }
+
+    private void cacheResponse(String key, Object result) {
+        if (!(result instanceof ResponseEntity<?> responseEntity)) {
+            return;
+        }
+        try {
+            idempotencyStore.save(key, serialize(responseEntity.getBody()));
+        } catch (Exception e) {
+            log.warn("멱등성 응답 캐싱에 실패했습니다.", e);
+        }
+    }
+
+    private void deleteKeyQuietly(String key) {
+        try {
+            idempotencyStore.delete(key);
+        } catch (Exception e) {
+            log.warn("멱등성 키 삭제에 실패했습니다.", e);
         }
     }
 
@@ -102,7 +110,7 @@ public class IdempotencyAspect {
         }
 
         HttpServletRequest request = attrs.getRequest();
-        String key = request.getHeader("Idempotency-Key");
+        String key = request.getHeader(IDEMPOTENCY_KEY);
         if (key == null || key.isBlank()) {
             return null;
         }

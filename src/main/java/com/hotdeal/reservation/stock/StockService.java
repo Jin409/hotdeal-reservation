@@ -18,12 +18,12 @@ public class StockService {
     private final RedisHealthChecker redisHealthChecker;
 
     @Transactional
-    public boolean decrease(Long productId) {
+    public void decrease(Long productId) {
         if (!redisHealthChecker.isRedisAvailable()) {
-            return decreaseWithDbFallback(productId);
+            decreaseWithDbLock(productId);
+            return;
         }
-
-        return decreaseWithRedis(productId);
+        decreaseWithRedis(productId);
     }
 
     public void rollback(Long productId) {
@@ -34,25 +34,19 @@ public class StockService {
         }
     }
 
-    private boolean decreaseWithRedis(Long productId) {
+    private void decreaseWithRedis(Long productId) {
         try {
-            decreaseByRedis(productId);
-            return true;
+            atomicDecreaseRedis(productId);
+            syncStockToDb(productId);
         } catch (BadRequestException e) {
             throw e;
         } catch (Exception e) {
             log.warn("Redis 재고 차감 실패. DB 비관적 락으로 전환합니다.", e);
-            return decreaseWithDbFallback(productId);
+            decreaseWithDbLock(productId);
         }
     }
 
-    private boolean decreaseWithDbFallback(Long productId) {
-        log.warn("Redis 사용 불가. DB 비관적 락으로 재고를 차감합니다.");
-        decreaseByDb(productId);
-        return false;
-    }
-
-    private void decreaseByRedis(Long productId) {
+    private void atomicDecreaseRedis(Long productId) {
         Long remaining = stockRedisRepository.decrease(productId);
         if (remaining < 0) {
             stockRedisRepository.increase(productId);
@@ -60,7 +54,14 @@ public class StockService {
         }
     }
 
-    private void decreaseByDb(Long productId) {
+    private void syncStockToDb(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BadRequestException("상품을 찾을 수 없습니다."));
+        product.decreaseStock();
+    }
+
+    private void decreaseWithDbLock(Long productId) {
+        log.warn("Redis 사용 불가. DB 비관적 락으로 재고를 차감합니다.");
         Product product = productRepository.findByIdForUpdate(productId)
                 .orElseThrow(() -> new BadRequestException("상품을 찾을 수 없습니다."));
         product.decreaseStock();

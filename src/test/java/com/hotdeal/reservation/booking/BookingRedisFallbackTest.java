@@ -98,7 +98,7 @@ class BookingRedisFallbackTest {
         bookingService.book(user.getId(), booking.getId(), request);
 
         assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("이미 완료된 예약");
     }
 

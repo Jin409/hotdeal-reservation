@@ -41,6 +41,12 @@ public class Booking {
         this.createdAt = LocalDateTime.now();
     }
 
+    public void validateNotCompleted() {
+        if (this.status == BookingStatus.CONFIRMED) {
+            throw new IllegalStateException("이미 완료된 예약입니다.");
+        }
+    }
+
     public void confirm() {
         this.status = BookingStatus.CONFIRMED;
     }
