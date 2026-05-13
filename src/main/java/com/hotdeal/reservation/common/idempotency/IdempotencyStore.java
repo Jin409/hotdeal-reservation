@@ -1,4 +1,4 @@
-package com.hotdeal.reservation.idempotency;
+package com.hotdeal.reservation.common.idempotency;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

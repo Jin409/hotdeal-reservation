@@ -2,7 +2,7 @@ package com.hotdeal.reservation.booking;
 
 import com.hotdeal.reservation.booking.dto.BookingRequest;
 import com.hotdeal.reservation.booking.dto.BookingResponse;
-import com.hotdeal.reservation.idempotency.Idempotent;
+import com.hotdeal.reservation.common.idempotency.Idempotent;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

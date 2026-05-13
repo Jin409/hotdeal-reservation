@@ -1,4 +1,4 @@
-package com.hotdeal.reservation.idempotency;
+package com.hotdeal.reservation.common.idempotency;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
