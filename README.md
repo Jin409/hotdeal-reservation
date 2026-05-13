@@ -83,6 +83,16 @@ MySQL(3307 포트)과 Redis(6379 포트)가 실행됩니다.
 
 Docker 없이 실행됩니다. H2(인메모리 DB)와 Embedded Redis를 사용합니다.
 
+### 4. 부하 테스트 (k6)
+
+100명 동시 접속 시나리오를 k6로 검증합니다. 자세한 내용은 [scripts/README.md](scripts/README.md)를 참고하세요.
+
+```bash
+brew install k6
+mysql -h127.0.0.1 -P3307 -uroot -proot reservation < scripts/setup-test-data.sql
+k6 run scripts/load-test.js
+```
+
 ### 프로파일 구성
 
 | 프로파일         | DB             | Redis          | 용도    |
