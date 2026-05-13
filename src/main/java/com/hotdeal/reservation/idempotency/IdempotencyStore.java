@@ -55,7 +55,7 @@ public class IdempotencyStore {
             redisTemplate.opsForValue().set(checkoutKey, newKey, TTL_MINUTES, TimeUnit.MINUTES);
             return newKey;
         } catch (Exception e) {
-            log.warn("Redis 장애로 멱등키 발급을 건너뜁니다.", e);
+            log.warn("멱등키 발급에 실패하여 건너뜁니다.", e);
             return null;
         }
     }

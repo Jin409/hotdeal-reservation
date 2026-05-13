@@ -43,7 +43,7 @@ public class QueueStatusService {
         try {
             return queueRedisRepository.getRank(productId, userId);
         } catch (Exception e) {
-            log.warn("Redis 장애로 대기열 순번 조회를 할 수 없습니다.", e);
+            log.warn("대기열 순번 조회에 실패했습니다.", e);
             throw new ServiceUnavailableException("대기열 서비스가 일시적으로 불안정합니다.");
         }
     }

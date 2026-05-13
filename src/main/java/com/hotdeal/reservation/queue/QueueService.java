@@ -26,7 +26,7 @@ public class QueueService {
         } catch (DuplicateEntryException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("Redis 장애로 대기열 진입을 건너뜁니다.", e);
+            log.warn("대기열 진입에 실패하여 건너뜁니다.", e);
             return null;
         }
     }
@@ -40,7 +40,7 @@ public class QueueService {
         } catch (BadRequestException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("Redis 장애로 순번 검증을 건너뜁니다.", e);
+            log.warn("순번 검증에 실패하여 건너뜁니다.", e);
         }
     }
 
@@ -57,7 +57,7 @@ public class QueueService {
             queueRedisRepository.popFirst(productId);
             queueRedisRepository.removeEntry(productId, userId);
         } catch (Exception e) {
-            log.warn("Redis 장애로 대기열 제거를 건너뜁니다.", e);
+            log.warn("대기열 제거에 실패하여 건너뜁니다.", e);
         }
     }
 }
