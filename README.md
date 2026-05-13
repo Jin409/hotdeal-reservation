@@ -27,7 +27,7 @@ graph TD
 | 컴포넌트 | 역할 |
 |---|---|
 | App Server | 예약/결제 비즈니스 로직 처리 (2대 이상 분산 환경) |
-| Redis | 대기열 관리, 멱등성 키 저장 |
+| Redis | 대기열 관리, 결제 시간 제한 (ready TTL 3분), 멱등성 키 저장 |
 | MySQL | 상품/유저/예약/결제 영구 저장소, 재고 관리 (비관적 락) |
 
 ### 패키지 구조
@@ -138,11 +138,12 @@ sequenceDiagram
 
     사용자->>결제: 결제 요청 (클라이언트 멱등키 포함)
     결제->>결제: 클라이언트 멱등키 중복 확인
-    결제->>Redis: 순번 1등 검증
+    결제->>Redis: ready 키 검증 (결제 가능 상태 확인)
     결제->>DB: 재고 차감 (비관적 락)
     결제->>결제: 결제 처리 (PG사 호출)
     결제->>DB: 결제 저장 + 예약 확정
-    결제->>Redis: 대기열에서 제거
+    결제->>Redis: 대기열에서 제거 + ready 키 삭제
+    결제->>Redis: 다음 사람 ready 마킹 (TTL 3분)
     결제-->>사용자: CONFIRMED
 
     사용자->>폴링: 상태 확인
@@ -239,6 +240,39 @@ sequenceDiagram
     end
 ```
 
+### 대기열 이탈 처리 (ready TTL 만료)
+
+```mermaid
+sequenceDiagram
+    actor 유저1 as 유저1 (이탈)
+    actor 유저2 as 유저2 (대기 중)
+    participant 폴링 as GET /queue-status
+    participant Redis
+    participant 스케줄러
+
+    Note over Redis: 유저1 rank 1 (ready TTL 3분)
+    Note over Redis: 유저2 rank 2
+
+    유저1->>유저1: 결제하지 않고 이탈
+
+    Note over Redis: 3분 경과 → ready 키 자동 만료
+
+    alt 유저2가 폴링 (lazy)
+        유저2->>폴링: 내 순번 확인
+        폴링->>Redis: rank 1의 ready 키 확인
+        Redis-->>폴링: 없음 (만료됨)
+        폴링->>Redis: 유저1 대기열에서 제거
+        폴링->>Redis: 유저2 ready 마킹 (TTL 3분)
+        폴링-->>유저2: READY
+    else 스케줄러 감지 (proactive, 5초 간격)
+        스케줄러->>Redis: 대기열 있는 상품 조회
+        스케줄러->>Redis: rank 1의 ready 키 확인
+        Redis-->>스케줄러: 없음 (만료됨)
+        스케줄러->>Redis: 유저1 대기열에서 제거
+        스케줄러->>Redis: 유저2 ready 마킹 (TTL 3분)
+    end
+```
+
 ### Redis 장애 시 Checkout
 
 ```mermaid
@@ -279,7 +313,7 @@ sequenceDiagram
     결제->>결제: 클라이언트 멱등키 없음 → 멱등성 체크 건너뜀
     결제->>DB: 예약 조회 → WAITING 확인
 
-    결제->>Redis: 순번 검증 시도
+    결제->>Redis: ready 키 검증 시도
     Redis-->>결제: 연결 실패 → 건너뜀
 
     결제->>DB: 재고 차감 (비관적 락)

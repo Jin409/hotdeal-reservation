@@ -7,6 +7,7 @@ import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.common.exception.NotFoundException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
+import com.hotdeal.reservation.queue.QueueRedisRepository;
 import com.hotdeal.reservation.queue.QueueService;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
@@ -35,6 +36,9 @@ class QueueStatusServiceTest extends ServiceTest {
 
     @Autowired
     private BookingRepository bookingRepository;
+
+    @Autowired
+    private QueueRedisRepository queueRedisRepository;
 
     @Test
     void 대기열_첫번째이면_READY를_반환한다() {
@@ -109,6 +113,26 @@ class QueueStatusServiceTest extends ServiceTest {
     void 대기열에도_없고_예약도_없으면_예외가_발생한다() {
         assertThatThrownBy(() -> queueStatusService.getStatus(999L, 999L))
                 .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void 폴링_시_ready_만료된_첫번째_사용자가_제거되고_두번째가_READY로_승격된다() {
+        Product product = createProduct(10);
+        User firstUser = createUser("첫번째");
+        User secondUser = createUser("두번째");
+        queueService.enter(product.getId(), firstUser.getId());
+        queueService.enter(product.getId(), secondUser.getId());
+
+        // ready 키 수동 삭제 (TTL 만료 시뮬레이션)
+        queueRedisRepository.removeReady(product.getId(), firstUser.getId());
+
+        // 두번째 유저가 폴링 → evict 발생 → 승격
+        QueueStatusResponse response = queueStatusService.getStatus(product.getId(), secondUser.getId());
+
+        assertAll(
+                () -> assertThat(response.status()).isEqualTo(QueueStatus.READY),
+                () -> assertThat(response.rank()).isEqualTo(1L)
+        );
     }
 
     private Product createProduct(int stock) {
