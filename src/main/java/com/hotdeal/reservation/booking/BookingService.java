@@ -33,12 +33,13 @@ public class BookingService {
             paymentService.validate(user, request.paymentMethods(), product.getPrice());
             paymentService.processExternalPayments(bookingId, user, request.paymentMethods());
             bookingTransactionService.complete(bookingId, userId, request.paymentMethods(), product.getPrice());
-            queueService.leave(product.getId(), user.getId());
         } catch (Exception e) {
             stockService.rollback(product.getId());
             bookingTransactionService.cancel(bookingId);
             throw e;
         }
+
+        queueService.leave(product.getId(), user.getId());
 
         return new BookingResponse(bookingId, BookingStatus.CONFIRMED);
     }
