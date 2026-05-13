@@ -6,7 +6,6 @@ import com.hotdeal.reservation.common.AcceptanceTest;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.queue.QueueService;
-import com.hotdeal.reservation.stock.StockRedisRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,9 +30,6 @@ class QueueStatusAcceptanceTest extends AcceptanceTest {
 
     @Autowired
     private QueueService queueService;
-
-    @Autowired
-    private StockRedisRepository stockRedisRepository;
 
     private Product product;
     private User user;
@@ -98,11 +94,15 @@ class QueueStatusAcceptanceTest extends AcceptanceTest {
 
     @Test
     void 대기열에서_빠졌고_재고가_없으면_400을_반환한다() {
-        bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 0);
+        Product soldOutProduct = productRepository.save(
+                new Product("매진 호텔", 100000, 0,
+                        LocalDateTime.of(2026, 6, 1, 15, 0),
+                        LocalDateTime.of(2026, 6, 2, 11, 0))
+        );
+        bookingRepository.save(Booking.waiting(user.getId(), soldOutProduct.getId()));
 
         given()
-                .param("productId", product.getId())
+                .param("productId", soldOutProduct.getId())
                 .header("userId", user.getId())
         .when()
                 .get("/queue-status")

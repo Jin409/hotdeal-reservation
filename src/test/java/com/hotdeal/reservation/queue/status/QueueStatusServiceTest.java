@@ -8,7 +8,6 @@ import com.hotdeal.reservation.common.exception.NotFoundException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.queue.QueueService;
-import com.hotdeal.reservation.stock.StockRedisRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -36,9 +35,6 @@ class QueueStatusServiceTest extends ServiceTest {
 
     @Autowired
     private BookingRepository bookingRepository;
-
-    @Autowired
-    private StockRedisRepository stockRedisRepository;
 
     @Test
     void 대기열_첫번째이면_READY를_반환한다() {
@@ -90,7 +86,6 @@ class QueueStatusServiceTest extends ServiceTest {
         User user = createUser("유저1");
         queueService.enter(product.getId(), firstUser.getId());
         bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 5);
 
         QueueStatusResponse response = queueStatusService.getStatus(product.getId(), user.getId());
 
@@ -105,7 +100,6 @@ class QueueStatusServiceTest extends ServiceTest {
         Product product = createProduct(0);
         User user = createUser("유저1");
         bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 0);
 
         assertThatThrownBy(() -> queueStatusService.getStatus(product.getId(), user.getId()))
                 .isInstanceOf(BadRequestException.class);

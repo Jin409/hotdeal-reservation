@@ -27,8 +27,8 @@ graph TD
 | 컴포넌트 | 역할 |
 |---|---|
 | App Server | 예약/결제 비즈니스 로직 처리 (2대 이상 분산 환경) |
-| Redis | 대기열 관리, 재고 선점(원자적 감소), 멱등성 키 저장 |
-| MySQL | 상품/유저/예약/결제 영구 저장소 |
+| Redis | 대기열 관리, 멱등성 키 저장 |
+| MySQL | 상품/유저/예약/결제 영구 저장소, 재고 관리 (비관적 락) |
 
 ### 패키지 구조
 
@@ -44,7 +44,7 @@ com.hotdeal.reservation
 ├── product/          상품 도메인
 ├── queue/            대기열 관리
 │   └── status/       대기열 상태 조회 (폴링)
-├── stock/            재고 관리 (Redis + DB Fallback)
+├── stock/            재고 관리 (DB 비관적 락)
 └── user/             사용자 도메인
 ```
 
@@ -74,7 +74,6 @@ MySQL(3307 포트)과 Redis(6379 포트)가 실행됩니다.
 앱 기동 시 자동으로:
 - JPA가 테이블을 생성합니다 (`ddl-auto: update`)
 - 초기 데이터가 삽입됩니다 (상품 1개, 유저 3명)
-- Redis에 재고가 동기화됩니다
 
 ### 3. 테스트 실행
 
@@ -140,9 +139,9 @@ sequenceDiagram
     사용자->>결제: 결제 요청 (클라이언트 멱등키 포함)
     결제->>결제: 클라이언트 멱등키 중복 확인
     결제->>Redis: 순번 1등 검증
-    결제->>Redis: 재고 감소 (원자적)
+    결제->>DB: 재고 차감 (비관적 락)
     결제->>결제: 결제 처리 (PG사 호출)
-    결제->>DB: 재고 차감 + 결제 저장 + 예약 확정
+    결제->>DB: 결제 저장 + 예약 확정
     결제->>Redis: 대기열에서 제거
     결제-->>사용자: CONFIRMED
 
@@ -178,19 +177,20 @@ sequenceDiagram
 sequenceDiagram
     participant 서버1 as App Server 1
     participant 서버2 as App Server 2
-    participant Redis
+    participant DB
 
-    Note over Redis: 재고: 1개 남음
+    Note over DB: 재고: 1개 남음
 
-    서버1->>Redis: 재고 감소 (원자적)
-    Redis-->>서버1: 0 (성공)
+    서버1->>DB: 재고 조회 (락 획득)
+    Note over DB: 서버2는 락 대기
+    서버1->>DB: 재고 차감 (1 → 0)
+    Note over DB: 락 해제
 
-    서버2->>Redis: 재고 감소 (원자적)
-    Redis-->>서버2: -1 (실패)
-    서버2->>Redis: 재고 원복
-    서버2-->>서버2: 재고 없음 응답
+    서버2->>DB: 재고 조회 (락 획득)
+    DB-->>서버2: 재고 0
+    서버2-->>서버2: 재고 없음 예외
 
-    Note over Redis: 재고: 0<br/>서버1만 성공, 초과판매 없음
+    Note over DB: 재고: 0<br/>서버1만 성공, 초과판매 없음
 ```
 
 ### 결제 실패 시 보상 트랜잭션
@@ -198,18 +198,16 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant 예약서비스
-    participant 재고 as Redis 재고
     participant PG사
     participant DB
 
-    예약서비스->>재고: 재고 감소
-    재고-->>예약서비스: 성공
+    예약서비스->>DB: 재고 차감 (비관적 락)
+    DB-->>예약서비스: 성공
 
     예약서비스->>PG사: 결제 요청
     PG사-->>예약서비스: 카드 거절 (NonRetryable)
 
     Note over 예약서비스: 보상 트랜잭션 시작
-    예약서비스->>재고: 재고 원복
     예약서비스->>DB: 예약 상태 → CANCELLED (별도 트랜잭션)
     예약서비스->>예약서비스: 클라이언트 멱등키 삭제 (재시도 허용)
     예약서비스-->>예약서비스: 에러 반환
@@ -237,7 +235,7 @@ sequenceDiagram
         PG사-->>결제처리기: 성공
     else 최종 실패
         PG사-->>결제처리기: 실패
-        Note over 결제처리기: 보상 트랜잭션 실행<br/>(재고 원복 + 예약 취소)
+        Note over 결제처리기: 보상 트랜잭션 실행<br/>(예약 취소)
     end
 ```
 
@@ -284,11 +282,7 @@ sequenceDiagram
     결제->>Redis: 순번 검증 시도
     Redis-->>결제: 연결 실패 → 건너뜀
 
-    결제->>Redis: 재고 감소 시도
-    Redis-->>결제: 연결 실패
-    Note over 결제: DB 비관적 락으로 전환
-    결제->>DB: 재고 조회 (락 획득) + 차감
-
+    결제->>DB: 재고 차감 (비관적 락)
     결제->>결제: 결제 처리 (PG사 호출)
     결제->>DB: 결제 저장 + 예약 확정 (CONFIRMED)
     결제-->>사용자: CONFIRMED
@@ -356,7 +350,7 @@ erDiagram
 | 테이블 | 설명 |
 |---|---|
 | `users` | 사용자 정보. 포인트 잔액 포함 |
-| `products` | 숙소 상품. 재고(stock)는 Redis와 동기화하여 관리 |
+| `products` | 숙소 상품. 재고(stock)는 DB 비관적 락으로 관리 |
 | `bookings` | 예약 내역. 상태: WAITING → CONFIRMED / CANCELLED |
 | `payments` | 결제 내역. 상태: PENDING → SUCCESS |
 | `payment_items` | 복합결제의 각 결제 수단별 금액 (카드 80,000 + 포인트 20,000 등) |
