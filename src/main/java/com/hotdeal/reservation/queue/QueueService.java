@@ -22,7 +22,13 @@ public class QueueService {
             }
 
             queueRedisRepository.addToQueue(productId, userId);
-            return queueRedisRepository.getRank(productId, userId);
+            Long rank = queueRedisRepository.getRank(productId, userId);
+
+            if (rank != null && rank == FIRST_IN_LINE) {
+                queueRedisRepository.markReady(productId, userId);
+            }
+
+            return rank;
         } catch (DuplicateEntryException e) {
             throw e;
         } catch (Exception e) {
@@ -31,16 +37,15 @@ public class QueueService {
         }
     }
 
-    public void validateIsFirstInLine(Long productId, Long userId) {
+    public void validateIsReady(Long productId, Long userId) {
         try {
-            Long rank = queueRedisRepository.getRank(productId, userId);
-            if (rank != null && rank != FIRST_IN_LINE) {
+            if (!queueRedisRepository.isReady(productId, userId)) {
                 throw new BadRequestException("아직 결제할 수 있는 순번이 아닙니다.");
             }
         } catch (BadRequestException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("순번 검증에 실패하여 건너뜁니다.", e);
+            log.warn("결제 가능 상태 검증에 실패하여 건너뜁니다.", e);
         }
     }
 
@@ -56,8 +61,17 @@ public class QueueService {
         try {
             queueRedisRepository.popFirst(productId);
             queueRedisRepository.removeEntry(productId, userId);
+            queueRedisRepository.removeReady(productId, userId);
+            markNextUserReady(productId);
         } catch (Exception e) {
             log.warn("대기열 제거에 실패하여 건너뜁니다.", e);
+        }
+    }
+
+    private void markNextUserReady(Long productId) {
+        Long nextUserId = queueRedisRepository.getFirstUserId(productId);
+        if (nextUserId != null) {
+            queueRedisRepository.markReady(productId, nextUserId);
         }
     }
 }

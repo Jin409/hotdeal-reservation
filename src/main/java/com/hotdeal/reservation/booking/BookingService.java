@@ -52,7 +52,7 @@ public class BookingService {
 
     private void qualifyToBook(Long userId, Booking booking, Product product) {
         booking.validateNotCompleted();
-        queueService.validateIsFirstInLine(product.getId(), userId);
+        queueService.validateIsReady(product.getId(), userId);
     }
 
     private void processPayment(Long bookingId, User user,

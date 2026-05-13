@@ -58,7 +58,7 @@ class BookingRedisFallbackTest {
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
 
-        given(queueRedisRepository.getRank(anyLong(), anyLong()))
+        given(queueRedisRepository.isReady(anyLong(), anyLong()))
                 .willThrow(new RedisConnectionFailureException("Redis 연결 실패"));
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(
@@ -78,7 +78,7 @@ class BookingRedisFallbackTest {
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
 
-        given(queueRedisRepository.getRank(anyLong(), anyLong()))
+        given(queueRedisRepository.isReady(anyLong(), anyLong()))
                 .willThrow(new RedisConnectionFailureException("Redis 연결 실패"));
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(
@@ -98,7 +98,7 @@ class BookingRedisFallbackTest {
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
 
-        given(queueRedisRepository.getRank(anyLong(), anyLong()))
+        given(queueRedisRepository.isReady(anyLong(), anyLong()))
                 .willThrow(new RedisConnectionFailureException("Redis 연결 실패"));
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(
