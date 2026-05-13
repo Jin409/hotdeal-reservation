@@ -41,6 +41,9 @@ public class User {
     }
 
     public void usePoints(long amount) {
+        if (amount <= 0) {
+            return;
+        }
         this.point = point.use(amount);
     }
 }

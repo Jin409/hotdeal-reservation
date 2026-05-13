@@ -29,9 +29,7 @@ public class PaymentService {
         String pgIdempotencyKey = generatePgIdempotencyKey(bookingId);
 
         paymentMethods.externalMethods().forEach(pm -> {
-            PaymentType type = PaymentType.valueOf(pm.type());
-            PaymentProcessor processor = processorFactory.getProcessor(type);
-            processor.process(pgIdempotencyKey, user, pm.amount());
+            processByPaymentMethod(user, pm, pgIdempotencyKey);
         });
     }
 
@@ -40,15 +38,15 @@ public class PaymentService {
         PaymentMethods paymentMethods = new PaymentMethods(methods);
         Payment payment = paymentRepository.save(new Payment(bookingId, productPrice));
         savePaymentItems(payment.getId(), methods);
-        usePoints(user, paymentMethods);
+
+        user.usePoints(paymentMethods.pointAmount());
         payment.succeed();
     }
 
-    private void usePoints(User user, PaymentMethods paymentMethods) {
-        long pointAmount = paymentMethods.pointAmount();
-        if (pointAmount > 0) {
-            user.usePoints(pointAmount);
-        }
+    private void processByPaymentMethod(User user, PaymentMethodRequest pm, String pgIdempotencyKey) {
+        PaymentType type = PaymentType.valueOf(pm.type());
+        PaymentProcessor processor = processorFactory.getProcessor(type);
+        processor.process(pgIdempotencyKey, user, pm.amount());
     }
 
     private void savePaymentItems(Long paymentId, List<PaymentMethodRequest> methods) {
