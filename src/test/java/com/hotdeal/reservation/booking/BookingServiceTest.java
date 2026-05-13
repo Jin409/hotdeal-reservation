@@ -139,7 +139,7 @@ class BookingServiceTest extends ServiceTest {
         ));
 
         assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
-                .isInstanceOf(BadRequestException.class);
+                .isInstanceOf(IllegalArgumentException.class);
 
         Booking updated = bookingRepository.findById(booking.getId()).get();
         assertAll(
@@ -165,7 +165,7 @@ class BookingServiceTest extends ServiceTest {
         queueService.enter(product.getId(), user.getId());
 
         assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("이미 완료된 예약");
     }
 

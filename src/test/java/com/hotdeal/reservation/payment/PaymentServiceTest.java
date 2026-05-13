@@ -2,7 +2,6 @@ package com.hotdeal.reservation.payment;
 
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.ServiceTest;
-import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -30,7 +29,7 @@ class PaymentServiceTest extends ServiceTest {
         );
 
         assertThatThrownBy(() -> paymentService.validate(user, methods, 100000))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("신용카드와 Y페이");
     }
 
@@ -42,7 +41,7 @@ class PaymentServiceTest extends ServiceTest {
         );
 
         assertThatThrownBy(() -> paymentService.validate(user, methods, 100000))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("상품 가격과 일치하지 않습니다");
     }
 
@@ -54,7 +53,7 @@ class PaymentServiceTest extends ServiceTest {
         );
 
         assertThatThrownBy(() -> paymentService.validate(user, methods, 50000))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("포인트 잔액이 부족합니다");
     }
 

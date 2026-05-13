@@ -4,7 +4,6 @@ import com.hotdeal.reservation.booking.dto.BookingRequest;
 import com.hotdeal.reservation.booking.dto.BookingResponse;
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.EntityUtils;
-import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentService;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.queue.QueueService;
@@ -32,13 +31,13 @@ public class BookingService {
         Product product = entityUtils.getEntity(request.productId(), Product.class);
         User user = entityUtils.getEntity(userId, User.class);
 
-        validateToBook(userId, booking, product);
-        order(bookingId, request, product, user, booking);
+        qualifyToBook(userId, booking, product);
+        book(bookingId, request, product, user, booking);
 
         return new BookingResponse(booking.getId(), booking.getStatus());
     }
 
-    private void order(Long bookingId, BookingRequest request, Product product, User user, Booking booking) {
+    private void book(Long bookingId, BookingRequest request, Product product, User user, Booking booking) {
         stockService.decrease(product.getId());
 
         try {
@@ -51,8 +50,8 @@ public class BookingService {
         }
     }
 
-    private void validateToBook(Long userId, Booking booking, Product product) {
-        validateBookingStatus(booking);
+    private void qualifyToBook(Long userId, Booking booking, Product product) {
+        booking.validateNotCompleted();
         queueService.validateIsFirstInLine(product.getId(), userId);
     }
 
@@ -68,9 +67,4 @@ public class BookingService {
         bookingCommandService.cancel(bookingId);
     }
 
-    private void validateBookingStatus(Booking booking) {
-        if (booking.getStatus() == BookingStatus.CONFIRMED) {
-            throw new BadRequestException("이미 완료된 예약입니다.");
-        }
-    }
 }

@@ -1,7 +1,6 @@
 package com.hotdeal.reservation.payment;
 
 import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
-import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.processor.PaymentProcessor;
 import com.hotdeal.reservation.payment.processor.PaymentProcessorFactory;
 import com.hotdeal.reservation.user.User;
@@ -9,9 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,82 +18,47 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentItemRepository paymentItemRepository;
 
-    public void validate(User user, List<PaymentMethodRequest> paymentMethods, long productPrice) {
-        validatePaymentCombination(paymentMethods);
-        validateTotalAmountMatchesPrice(paymentMethods, productPrice);
-        validateHasEnoughPoint(paymentMethods, user);
+    public void validate(User user, List<PaymentMethodRequest> methods, long productPrice) {
+        PaymentMethods paymentMethods = new PaymentMethods(methods);
+        paymentMethods.validateTotalAmount(productPrice);
+        user.validatePointBalance(paymentMethods.pointAmount());
     }
 
-    public void processExternalPayments(Long bookingId, User user, List<PaymentMethodRequest> paymentMethods) {
+    public void processExternalPayments(Long bookingId, User user, List<PaymentMethodRequest> methods) {
+        PaymentMethods paymentMethods = new PaymentMethods(methods);
         String pgIdempotencyKey = generatePgIdempotencyKey(bookingId);
-        paymentMethods.stream()
-                .filter(pm -> !isPoint(pm))
-                .forEach(pm -> {
-                    PaymentType type = PaymentType.valueOf(pm.type());
-                    PaymentProcessor processor = processorFactory.getProcessor(type);
-                    processor.process(pgIdempotencyKey, user, pm.amount());
-                });
+
+        paymentMethods.externalMethods().forEach(pm -> {
+            PaymentType type = PaymentType.valueOf(pm.type());
+            PaymentProcessor processor = processorFactory.getProcessor(type);
+            processor.process(pgIdempotencyKey, user, pm.amount());
+        });
     }
 
-    public void savePaymentResult(Long bookingId, User user, List<PaymentMethodRequest> paymentMethods,
+    public void savePaymentResult(Long bookingId, User user, List<PaymentMethodRequest> methods,
                                   long productPrice) {
+        PaymentMethods paymentMethods = new PaymentMethods(methods);
         Payment payment = paymentRepository.save(new Payment(bookingId, productPrice));
-        savePaymentItems(payment.getId(), paymentMethods);
+        savePaymentItems(payment.getId(), methods);
         usePoints(user, paymentMethods);
         payment.succeed();
     }
 
-    private void usePoints(User user, List<PaymentMethodRequest> paymentMethods) {
-        long pointAmount = calculatePointToUse(paymentMethods);
+    private void usePoints(User user, PaymentMethods paymentMethods) {
+        long pointAmount = paymentMethods.pointAmount();
         if (pointAmount > 0) {
             user.usePoints(pointAmount);
         }
     }
 
-    private void savePaymentItems(Long paymentId, List<PaymentMethodRequest> paymentMethods) {
-        paymentMethods.forEach(pm -> {
+    private void savePaymentItems(Long paymentId, List<PaymentMethodRequest> methods) {
+        methods.forEach(pm -> {
             PaymentType type = PaymentType.valueOf(pm.type());
             paymentItemRepository.save(new PaymentItem(paymentId, type, pm.amount()));
         });
     }
 
-    private void validatePaymentCombination(List<PaymentMethodRequest> paymentMethods) {
-        Set<PaymentType> types = paymentMethods.stream()
-                .map(pm -> PaymentType.valueOf(pm.type()))
-                .collect(Collectors.toSet());
-
-        if (types.contains(PaymentType.CREDIT_CARD) && types.contains(PaymentType.YPAY)) {
-            throw new BadRequestException("신용카드와 Y페이는 동시에 사용할 수 없습니다.");
-        }
-    }
-
-    private void validateTotalAmountMatchesPrice(List<PaymentMethodRequest> paymentMethods, long productPrice) {
-        long totalAmount = paymentMethods.stream().mapToLong(PaymentMethodRequest::amount).sum();
-
-        if (totalAmount != productPrice) {
-            throw new BadRequestException("총 결제금액이 상품 가격과 일치하지 않습니다.");
-        }
-    }
-
-    private void validateHasEnoughPoint(List<PaymentMethodRequest> paymentMethods, User user) {
-        long pointAmount = calculatePointToUse(paymentMethods);
-        if (!user.getPoint().hasEnough(pointAmount)) {
-            throw new BadRequestException("포인트 잔액이 부족합니다.");
-        }
-    }
-
     private String generatePgIdempotencyKey(Long bookingId) {
         return "pg:" + bookingId + ":" + UUID.randomUUID();
-    }
-
-    private boolean isPoint(PaymentMethodRequest pm) {
-        return PaymentType.valueOf(pm.type()) == PaymentType.YPOINT;
-    }
-
-    private long calculatePointToUse(List<PaymentMethodRequest> paymentMethods) {
-        return paymentMethods.stream()
-                .filter(this::isPoint)
-                .mapToLong(PaymentMethodRequest::amount)
-                .sum();
     }
 }
