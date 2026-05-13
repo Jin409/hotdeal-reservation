@@ -19,4 +19,11 @@ public class StockService {
                 .orElseThrow(() -> new BadRequestException("상품을 찾을 수 없습니다."));
         product.decreaseStock();
     }
+
+    @Transactional
+    public void rollback(Long productId) {
+        Product product = productRepository.findByIdForUpdate(productId)
+                .orElseThrow(() -> new BadRequestException("상품을 찾을 수 없습니다."));
+        product.increaseStock();
+    }
 }
