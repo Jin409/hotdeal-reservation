@@ -55,7 +55,7 @@ public class StockService {
     }
 
     private void syncStockToDb(Long productId) {
-        Product product = productRepository.findById(productId)
+        Product product = productRepository.findByIdForUpdate(productId)
                 .orElseThrow(() -> new BadRequestException("상품을 찾을 수 없습니다."));
         product.decreaseStock();
     }
