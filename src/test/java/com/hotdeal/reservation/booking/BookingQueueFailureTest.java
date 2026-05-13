@@ -5,7 +5,7 @@ import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.EmbeddedRedisConfig;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
-import com.hotdeal.reservation.queue.QueueService;
+import com.hotdeal.reservation.queue.QueueRedisRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -22,8 +22,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.BDDMockito.doNothing;
-import static org.mockito.BDDMockito.doThrow;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 
 @SpringBootTest
 @Import(EmbeddedRedisConfig.class)
@@ -42,7 +42,7 @@ class BookingQueueFailureTest {
     private UserRepository userRepository;
 
     @MockitoBean
-    private QueueService queueService;
+    private QueueRedisRepository queueRedisRepository;
 
     @AfterEach
     void cleanUp() {
@@ -57,9 +57,9 @@ class BookingQueueFailureTest {
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
 
-        doNothing().when(queueService).validateIsReady(anyLong(), anyLong());
-        doThrow(new RedisConnectionFailureException("Redis 연결 실패"))
-                .when(queueService).leave(anyLong(), anyLong());
+        given(queueRedisRepository.isReady(anyLong(), anyLong())).willReturn(true);
+        willThrow(new RedisConnectionFailureException("Redis 연결 실패"))
+                .given(queueRedisRepository).popFirst(anyLong());
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(
                 new PaymentMethodRequest("CREDIT_CARD", 100000)
