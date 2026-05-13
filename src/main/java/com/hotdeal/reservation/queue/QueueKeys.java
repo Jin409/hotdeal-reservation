@@ -17,4 +17,12 @@ public class QueueKeys {
     public static String ready(Long productId, Long userId) {
         return READY_PREFIX + productId + ":" + userId;
     }
+
+    public static String queuePattern() {
+        return QUEUE_PREFIX + "*";
+    }
+
+    public static Long extractProductId(String queueKey) {
+        return Long.parseLong(queueKey.replace(QUEUE_PREFIX, ""));
+    }
 }

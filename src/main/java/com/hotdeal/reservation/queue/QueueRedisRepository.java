@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -56,5 +59,15 @@ public class QueueRedisRepository {
     public Long getFirstUserId(Long productId) {
         String userId = redisTemplate.opsForList().index(QueueKeys.queue(productId), 0);
         return userId != null ? Long.parseLong(userId) : null;
+    }
+
+    public Set<Long> getActiveProductIds() {
+        Set<String> keys = redisTemplate.keys(QueueKeys.queuePattern());
+        if (keys.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return keys.stream()
+                .map(QueueKeys::extractProductId)
+                .collect(Collectors.toSet());
     }
 }
