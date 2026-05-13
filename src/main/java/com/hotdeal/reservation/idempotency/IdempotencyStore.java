@@ -1,12 +1,14 @@
 package com.hotdeal.reservation.idempotency;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class IdempotencyStore {
@@ -42,14 +44,19 @@ public class IdempotencyStore {
     }
 
     public String issue(String id) {
-        String checkoutKey = CHECKOUT_PREFIX + id;
-        String existing = redisTemplate.opsForValue().get(checkoutKey);
-        if (existing != null) {
-            return existing;
-        }
+        try {
+            String checkoutKey = CHECKOUT_PREFIX + id;
+            String existing = redisTemplate.opsForValue().get(checkoutKey);
+            if (existing != null) {
+                return existing;
+            }
 
-        String newKey = java.util.UUID.randomUUID().toString();
-        redisTemplate.opsForValue().set(checkoutKey, newKey, TTL_MINUTES, TimeUnit.MINUTES);
-        return newKey;
+            String newKey = java.util.UUID.randomUUID().toString();
+            redisTemplate.opsForValue().set(checkoutKey, newKey, TTL_MINUTES, TimeUnit.MINUTES);
+            return newKey;
+        } catch (Exception e) {
+            log.warn("Redis 장애로 멱등키 발급을 건너뜁니다.", e);
+            return null;
+        }
     }
 }

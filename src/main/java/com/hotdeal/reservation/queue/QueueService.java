@@ -15,13 +15,20 @@ public class QueueService {
     private final QueueRedisRepository queueRedisRepository;
 
     public Long enter(Long productId, Long userId) {
-        boolean entered = queueRedisRepository.tryEnter(productId, userId);
-        if (!entered) {
-            throw new DuplicateEntryException("이미 대기열에 진입한 사용자입니다.");
-        }
+        try {
+            boolean entered = queueRedisRepository.tryEnter(productId, userId);
+            if (!entered) {
+                throw new DuplicateEntryException("이미 대기열에 진입한 사용자입니다.");
+            }
 
-        queueRedisRepository.addToQueue(productId, userId);
-        return queueRedisRepository.getRank(productId, userId);
+            queueRedisRepository.addToQueue(productId, userId);
+            return queueRedisRepository.getRank(productId, userId);
+        } catch (DuplicateEntryException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Redis 장애로 대기열 진입을 건너뜁니다.", e);
+            return null;
+        }
     }
 
     public void validateIsFirstInLine(Long productId, Long userId) {
