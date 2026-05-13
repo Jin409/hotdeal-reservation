@@ -6,26 +6,20 @@ import com.hotdeal.reservation.common.EntityUtils;
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentService;
 import com.hotdeal.reservation.product.Product;
-import com.hotdeal.reservation.queue.QueueRedisRepository;
 import com.hotdeal.reservation.queue.QueueService;
 import com.hotdeal.reservation.stock.StockService;
 import com.hotdeal.reservation.user.User;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookingService {
 
-    private static final long FIRST_IN_LINE = 1;
-
     private final EntityUtils entityUtils;
     private final PaymentService paymentService;
     private final StockService stockService;
-    private final QueueRedisRepository queueRedisRepository;
     private final QueueService queueService;
     private final BookingCommandService bookingCommandService;
 
@@ -36,49 +30,36 @@ public class BookingService {
         User user = entityUtils.getEntity(userId, User.class);
 
         validateBookingStatus(booking);
-        validateIsFirstInLine(product.getId(), userId);
-        boolean decreasedByRedis = stockService.decrease(product.getId());
+        queueService.validateIsFirstInLine(product.getId(), userId);
 
+        stockService.decrease(product.getId());
         try {
-            paymentService.pay(bookingId, user, request.paymentMethods(), product.getPrice());
-            if (decreasedByRedis) {
-                product.decreaseStock();
-            }
-            booking.confirm();
-            leaveQueue(product.getId(), userId);
+            processPaymentAndConfirm(booking, product, user, bookingId, request);
         } catch (Exception e) {
-            stockService.rollback(product.getId());
-            bookingCommandService.cancel(bookingId);
+            handlePaymentFailure(product.getId(), bookingId);
             throw e;
         }
 
         return new BookingResponse(booking.getId(), booking.getStatus());
     }
 
+    private void processPaymentAndConfirm(Booking booking, Product product, User user,
+                                           Long bookingId, BookingRequest request) {
+        paymentService.validate(user, request.paymentMethods(), product.getPrice());
+        paymentService.processExternalPayments(bookingId, user, request.paymentMethods());
+        paymentService.savePaymentResult(bookingId, user, request.paymentMethods(), product.getPrice());
+        booking.confirm();
+        queueService.leave(product.getId(), user.getId());
+    }
+
+    private void handlePaymentFailure(Long productId, Long bookingId) {
+        stockService.rollback(productId);
+        bookingCommandService.cancel(bookingId);
+    }
+
     private void validateBookingStatus(Booking booking) {
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
             throw new BadRequestException("이미 완료된 예약입니다.");
-        }
-    }
-
-    private void validateIsFirstInLine(Long productId, Long userId) {
-        try {
-            Long rank = queueRedisRepository.getRank(productId, userId);
-            if (rank != null && rank != FIRST_IN_LINE) {
-                throw new BadRequestException("아직 결제할 수 있는 순번이 아닙니다.");
-            }
-        } catch (BadRequestException e) {
-            throw e;
-        } catch (Exception e) {
-            log.warn("Redis 장애로 순번 검증을 건너뜁니다.", e);
-        }
-    }
-
-    private void leaveQueue(Long productId, Long userId) {
-        try {
-            queueService.leave(productId, userId);
-        } catch (Exception e) {
-            log.warn("Redis 장애로 대기열 제거를 건너뜁니다.", e);
         }
     }
 }

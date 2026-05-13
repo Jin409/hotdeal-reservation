@@ -29,7 +29,7 @@ class PaymentServiceTest extends ServiceTest {
                 new PaymentMethodRequest("YPAY", 50000)
         );
 
-        assertThatThrownBy(() -> paymentService.pay(1L, user, methods, 100000))
+        assertThatThrownBy(() -> paymentService.validate(user, methods, 100000))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("신용카드와 Y페이");
     }
@@ -41,7 +41,7 @@ class PaymentServiceTest extends ServiceTest {
                 new PaymentMethodRequest("CREDIT_CARD", 80000)
         );
 
-        assertThatThrownBy(() -> paymentService.pay(1L, user, methods, 100000))
+        assertThatThrownBy(() -> paymentService.validate(user, methods, 100000))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("상품 가격과 일치하지 않습니다");
     }
@@ -53,7 +53,7 @@ class PaymentServiceTest extends ServiceTest {
                 new PaymentMethodRequest("YPOINT", 50000)
         );
 
-        assertThatThrownBy(() -> paymentService.pay(1L, user, methods, 50000))
+        assertThatThrownBy(() -> paymentService.validate(user, methods, 50000))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("포인트 잔액이 부족합니다");
     }
@@ -66,7 +66,9 @@ class PaymentServiceTest extends ServiceTest {
                 new PaymentMethodRequest("YPOINT", 20000)
         );
 
-        paymentService.pay(1L, user, methods, 100000);
+        paymentService.validate(user, methods, 100000);
+        paymentService.processExternalPayments(1L, user, methods);
+        paymentService.savePaymentResult(1L, user, methods, 100000);
 
         assertThat(user.getPointBalance()).isEqualTo(30000);
     }
@@ -78,7 +80,9 @@ class PaymentServiceTest extends ServiceTest {
                 new PaymentMethodRequest("CREDIT_CARD", 100000)
         );
 
-        paymentService.pay(1L, user, methods, 100000);
+        paymentService.validate(user, methods, 100000);
+        paymentService.processExternalPayments(1L, user, methods);
+        paymentService.savePaymentResult(1L, user, methods, 100000);
 
         assertThat(user.getPointBalance()).isEqualTo(50000);
     }

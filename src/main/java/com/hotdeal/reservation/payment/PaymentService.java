@@ -21,36 +21,29 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentItemRepository paymentItemRepository;
 
-    public void pay(Long bookingId, User user, List<PaymentMethodRequest> paymentMethods, long productPrice) {
-        validate(paymentMethods, productPrice, user);
-
-        Payment payment = paymentRepository.save(new Payment(bookingId, productPrice));
-        processPayments(bookingId, user, paymentMethods);
-
-        savePaymentItems(payment.getId(), paymentMethods);
-        payment.succeed();
-    }
-
-    private void validate(List<PaymentMethodRequest> paymentMethods, long productPrice, User user) {
+    public void validate(User user, List<PaymentMethodRequest> paymentMethods, long productPrice) {
         validatePaymentCombination(paymentMethods);
         validateTotalAmountMatchesPrice(paymentMethods, productPrice);
         validateHasEnoughPoint(paymentMethods, user);
     }
 
-    private void processPayments(Long bookingId, User user, List<PaymentMethodRequest> paymentMethods) {
+    public void processExternalPayments(Long bookingId, User user, List<PaymentMethodRequest> paymentMethods) {
         String pgIdempotencyKey = generatePgIdempotencyKey(bookingId);
-        processExternalPayments(pgIdempotencyKey, user, paymentMethods);
-        usePoints(user, paymentMethods);
-    }
-
-    private void processExternalPayments(String idempotencyKey, User user, List<PaymentMethodRequest> paymentMethods) {
         paymentMethods.stream()
                 .filter(pm -> !isPoint(pm))
                 .forEach(pm -> {
                     PaymentType type = PaymentType.valueOf(pm.type());
                     PaymentProcessor processor = processorFactory.getProcessor(type);
-                    processor.process(idempotencyKey, user, pm.amount());
+                    processor.process(pgIdempotencyKey, user, pm.amount());
                 });
+    }
+
+    public void savePaymentResult(Long bookingId, User user, List<PaymentMethodRequest> paymentMethods,
+                                  long productPrice) {
+        Payment payment = paymentRepository.save(new Payment(bookingId, productPrice));
+        savePaymentItems(payment.getId(), paymentMethods);
+        usePoints(user, paymentMethods);
+        payment.succeed();
     }
 
     private void usePoints(User user, List<PaymentMethodRequest> paymentMethods) {
