@@ -2,6 +2,7 @@ package com.hotdeal.reservation.booking;
 
 import com.hotdeal.reservation.booking.dto.BookingRequest;
 import com.hotdeal.reservation.booking.dto.BookingResponse;
+import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
 import com.hotdeal.reservation.common.EntityUtils;
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentService;
@@ -12,6 +13,8 @@ import com.hotdeal.reservation.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -29,30 +32,38 @@ public class BookingService {
         Product product = entityUtils.getEntity(request.productId(), Product.class);
         User user = entityUtils.getEntity(userId, User.class);
 
-        validateBookingStatus(booking);
-        queueService.validateIsFirstInLine(product.getId(), userId);
-
-        stockService.decrease(product.getId());
-        try {
-            processPaymentAndConfirm(booking, product, user, bookingId, request);
-        } catch (Exception e) {
-            handlePaymentFailure(product.getId(), bookingId);
-            throw e;
-        }
+        validateToBook(userId, booking, product);
+        order(bookingId, request, product, user, booking);
 
         return new BookingResponse(booking.getId(), booking.getStatus());
     }
 
-    private void processPaymentAndConfirm(Booking booking, Product product, User user,
-                                           Long bookingId, BookingRequest request) {
-        paymentService.validate(user, request.paymentMethods(), product.getPrice());
-        paymentService.processExternalPayments(bookingId, user, request.paymentMethods());
-        paymentService.savePaymentResult(bookingId, user, request.paymentMethods(), product.getPrice());
-        booking.confirm();
-        queueService.leave(product.getId(), user.getId());
+    private void order(Long bookingId, BookingRequest request, Product product, User user, Booking booking) {
+        stockService.decrease(product.getId());
+
+        try {
+            processPayment(bookingId, user, request.paymentMethods(), product.getPrice());
+            booking.confirm();
+            queueService.leave(product.getId(), user.getId());
+        } catch (Exception e) {
+            compensate(product.getId(), bookingId);
+            throw e;
+        }
     }
 
-    private void handlePaymentFailure(Long productId, Long bookingId) {
+    private void validateToBook(Long userId, Booking booking, Product product) {
+        validateBookingStatus(booking);
+        queueService.validateIsFirstInLine(product.getId(), userId);
+    }
+
+    private void processPayment(Long bookingId, User user,
+                                List<PaymentMethodRequest> paymentMethods, long price) {
+        paymentService.validate(user, paymentMethods, price);
+        paymentService.processExternalPayments(bookingId, user, paymentMethods);
+        paymentService.savePaymentResult(bookingId, user, paymentMethods, price);
+    }
+
+    private void compensate(Long productId, Long bookingId) {
         stockService.rollback(productId);
         bookingCommandService.cancel(bookingId);
     }
