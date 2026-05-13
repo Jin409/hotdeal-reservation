@@ -14,7 +14,7 @@ public class YPointProcessor implements PaymentProcessor {
 
     @Override
     public void cancel(String idempotencyKey) {
-        // 포인트는 외부 PG가 아니므로 취소 불필요
+        throw new UnsupportedOperationException("포인트 결제는 외부 PG 취소 대상이 아닙니다.");
     }
 
     @Override
