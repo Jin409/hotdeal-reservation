@@ -13,6 +13,11 @@ public class YPointProcessor implements PaymentProcessor {
     }
 
     @Override
+    public void cancel(String idempotencyKey) {
+        // 포인트는 외부 PG가 아니므로 취소 불필요
+    }
+
+    @Override
     public PaymentType supportedType() {
         return PaymentType.YPOINT;
     }

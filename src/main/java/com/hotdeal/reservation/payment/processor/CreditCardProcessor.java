@@ -34,6 +34,11 @@ public class CreditCardProcessor implements PaymentProcessor {
     }
 
     @Override
+    public void cancel(String idempotencyKey) {
+        cardPgClient.cancel(idempotencyKey);
+    }
+
+    @Override
     public PaymentType supportedType() {
         return PaymentType.CREDIT_CARD;
     }

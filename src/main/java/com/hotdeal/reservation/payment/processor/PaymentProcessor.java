@@ -7,5 +7,7 @@ public interface PaymentProcessor {
 
     void process(String idempotencyKey, User user, long amount);
 
+    void cancel(String idempotencyKey);
+
     PaymentType supportedType();
 }
