@@ -10,16 +10,12 @@ import com.hotdeal.reservation.payment.PaymentRepository;
 import com.hotdeal.reservation.payment.PaymentStatus;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
-import com.hotdeal.reservation.queue.QueueKeys;
 import com.hotdeal.reservation.queue.QueueRedisRepository;
 import com.hotdeal.reservation.queue.QueueService;
-import com.hotdeal.reservation.stock.StockKeys;
-import com.hotdeal.reservation.stock.StockRedisRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,13 +39,7 @@ class BookingServiceTest extends ServiceTest {
     private UserRepository userRepository;
 
     @Autowired
-    private StockRedisRepository stockRedisRepository;
-
-    @Autowired
     private QueueService queueService;
-
-    @Autowired
-    private StringRedisTemplate redisTemplate;
 
     @Autowired
     private PaymentRepository paymentRepository;
@@ -66,7 +56,6 @@ class BookingServiceTest extends ServiceTest {
         User firstUser = createUser("첫번째", 50000L);
         User secondUser = createUser("두번째", 100000L);
         Booking booking = bookingRepository.save(Booking.waiting(firstUser.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 10);
         queueService.enter(product.getId(), firstUser.getId());
         queueService.enter(product.getId(), secondUser.getId());
 
@@ -77,10 +66,11 @@ class BookingServiceTest extends ServiceTest {
 
         BookingResponse response = bookingService.book(firstUser.getId(), booking.getId(), request);
 
+        Product updatedProduct = productRepository.findById(product.getId()).get();
         User updatedUser = userRepository.findById(firstUser.getId()).get();
         assertAll(
                 () -> assertThat(response.status()).isEqualTo(BookingStatus.CONFIRMED),
-                () -> assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("9"),
+                () -> assertThat(updatedProduct.getStock().getQuantity()).isEqualTo(9),
                 () -> assertThat(updatedUser.getPointBalance()).isEqualTo(0L),
                 () -> assertThat(paymentRepository.findAll()).hasSize(1),
                 () -> assertThat(paymentRepository.findAll().get(0).getStatus()).isEqualTo(PaymentStatus.SUCCESS),
@@ -95,7 +85,6 @@ class BookingServiceTest extends ServiceTest {
         Product product = createProduct(0);
         User user = createUser("홍길동", 100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 0);
         queueService.enter(product.getId(), user.getId());
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(
@@ -112,7 +101,6 @@ class BookingServiceTest extends ServiceTest {
         User firstUser = createUser("첫번째", 100000L);
         User secondUser = createUser("두번째", 100000L);
         Booking booking = bookingRepository.save(Booking.waiting(secondUser.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 10);
         queueService.enter(product.getId(), firstUser.getId());
         queueService.enter(product.getId(), secondUser.getId());
 
@@ -126,11 +114,10 @@ class BookingServiceTest extends ServiceTest {
     }
 
     @Test
-    void 결제_실패시_재고가_롤백되고_Booking이_CANCELLED가_된다() {
+    void 결제_실패시_Booking이_CANCELLED가_된다() {
         Product product = createProduct(10);
         User user = createUser("홍길동", 10000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 10);
         queueService.enter(product.getId(), user.getId());
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(
@@ -142,10 +129,7 @@ class BookingServiceTest extends ServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
 
         Booking updated = bookingRepository.findById(booking.getId()).get();
-        assertAll(
-                () -> assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10"),
-                () -> assertThat(updated.getStatus()).isEqualTo(BookingStatus.CANCELLED)
-        );
+        assertThat(updated.getStatus()).isEqualTo(BookingStatus.CANCELLED);
     }
 
     @Test
@@ -153,7 +137,6 @@ class BookingServiceTest extends ServiceTest {
         Product product = createProduct(10);
         User user = createUser("홍길동", 100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 10);
         queueService.enter(product.getId(), user.getId());
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(

@@ -7,7 +7,6 @@ import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.queue.QueueRedisRepository;
-import com.hotdeal.reservation.stock.StockRedisRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -23,7 +22,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 
@@ -46,9 +45,6 @@ class BookingRedisFallbackTest {
     @MockitoBean
     private QueueRedisRepository queueRedisRepository;
 
-    @MockitoBean
-    private StockRedisRepository stockRedisRepository;
-
     @AfterEach
     void cleanUp() {
         bookingRepository.deleteAll();
@@ -57,14 +53,12 @@ class BookingRedisFallbackTest {
     }
 
     @Test
-    void Redis_장애시_순번_검증을_스킵하고_DB_비관적_락으로_결제에_성공한다() {
+    void Redis_장애시_순번_검증을_스킵하고_결제에_성공한다() {
         Product product = createProduct(10);
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
 
         given(queueRedisRepository.getRank(anyLong(), anyLong()))
-                .willThrow(new RedisConnectionFailureException("Redis 연결 실패"));
-        given(stockRedisRepository.decrease(anyLong()))
                 .willThrow(new RedisConnectionFailureException("Redis 연결 실패"));
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(
@@ -74,21 +68,17 @@ class BookingRedisFallbackTest {
         var response = bookingService.book(user.getId(), booking.getId(), request);
 
         Product updated = productRepository.findById(product.getId()).get();
-        assertAll(
-                () -> assertThat(response.status()).isEqualTo(BookingStatus.CONFIRMED),
-                () -> assertThat(updated.getStock().getQuantity()).isEqualTo(9)
-        );
+        assertThat(response.status()).isEqualTo(BookingStatus.CONFIRMED);
+        assertThat(updated.getStock().getQuantity()).isEqualTo(9);
     }
 
     @Test
-    void Redis_장애시_이미_완료된_예약에_재요청하면_400을_반환한다() {
+    void Redis_장애시_이미_완료된_예약에_재요청하면_예외가_발생한다() {
         Product product = createProduct(10);
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
 
         given(queueRedisRepository.getRank(anyLong(), anyLong()))
-                .willThrow(new RedisConnectionFailureException("Redis 연결 실패"));
-        given(stockRedisRepository.decrease(anyLong()))
                 .willThrow(new RedisConnectionFailureException("Redis 연결 실패"));
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(
@@ -103,14 +93,12 @@ class BookingRedisFallbackTest {
     }
 
     @Test
-    void Redis_장애시_재고가_없으면_DB_비관적_락에서_예외가_발생한다() {
+    void Redis_장애시_재고가_없으면_예외가_발생한다() {
         Product product = createProduct(0);
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
 
         given(queueRedisRepository.getRank(anyLong(), anyLong()))
-                .willThrow(new RedisConnectionFailureException("Redis 연결 실패"));
-        given(stockRedisRepository.decrease(anyLong()))
                 .willThrow(new RedisConnectionFailureException("Redis 연결 실패"));
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(

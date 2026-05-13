@@ -45,7 +45,7 @@ public class BookingService {
             booking.confirm();
             queueService.leave(product.getId(), user.getId());
         } catch (Exception e) {
-            compensate(product.getId(), bookingId);
+            bookingCommandService.cancel(bookingId);
             throw e;
         }
     }
@@ -61,10 +61,4 @@ public class BookingService {
         paymentService.processExternalPayments(bookingId, user, paymentMethods);
         paymentService.savePaymentResult(bookingId, user, paymentMethods, price);
     }
-
-    private void compensate(Long productId, Long bookingId) {
-        stockService.rollback(productId);
-        bookingCommandService.cancel(bookingId);
-    }
-
 }

@@ -6,9 +6,10 @@ import com.hotdeal.reservation.booking.BookingStatus;
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.common.exception.NotFoundException;
 import com.hotdeal.reservation.common.exception.ServiceUnavailableException;
+import com.hotdeal.reservation.product.Product;
+import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.queue.QueueRedisRepository;
 import com.hotdeal.reservation.queue.QueueService;
-import com.hotdeal.reservation.stock.StockRedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class QueueStatusService {
     private final QueueRedisRepository queueRedisRepository;
     private final BookingRepository bookingRepository;
     private final QueueService queueService;
-    private final StockRedisRepository stockRedisRepository;
+    private final ProductRepository productRepository;
 
     public QueueStatusResponse getStatus(Long productId, Long userId) {
         Long rank = getRank(productId, userId);
@@ -70,7 +71,8 @@ public class QueueStatusService {
     }
 
     private boolean hasStock(Long productId) {
-        String stock = stockRedisRepository.get(productId);
-        return stock != null && Long.parseLong(stock) > 0;
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BadRequestException("상품을 찾을 수 없습니다."));
+        return !product.getStock().isEmpty();
     }
 }

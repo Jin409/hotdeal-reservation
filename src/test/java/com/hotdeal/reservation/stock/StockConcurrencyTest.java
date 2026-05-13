@@ -5,7 +5,6 @@ import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.CountDownLatch;
@@ -22,13 +21,7 @@ class StockConcurrencyTest extends ServiceTest {
     private StockService stockService;
 
     @Autowired
-    private StockRedisRepository stockRedisRepository;
-
-    @Autowired
     private ProductRepository productRepository;
-
-    @Autowired
-    private StringRedisTemplate redisTemplate;
 
     @Test
     void 동시에_100명이_재고를_차감해도_10개만_성공한다() throws InterruptedException {
@@ -38,7 +31,6 @@ class StockConcurrencyTest extends ServiceTest {
                 new Product("제주 호텔", 100000, stock,
                         LocalDateTime.of(2026, 6, 1, 15, 0),
                         LocalDateTime.of(2026, 6, 2, 11, 0)));
-        stockRedisRepository.set(product.getId(), stock);
 
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
@@ -63,8 +55,7 @@ class StockConcurrencyTest extends ServiceTest {
 
         assertAll(
                 () -> assertThat(successCount.get()).isEqualTo(10),
-                () -> assertThat(failCount.get()).isEqualTo(90),
-                () -> assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("0")
+                () -> assertThat(failCount.get()).isEqualTo(90)
         );
     }
 }

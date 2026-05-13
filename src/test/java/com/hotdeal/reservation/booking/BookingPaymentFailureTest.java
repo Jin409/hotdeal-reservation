@@ -11,8 +11,6 @@ import com.hotdeal.reservation.payment.client.PgException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.queue.QueueService;
-import com.hotdeal.reservation.stock.StockKeys;
-import com.hotdeal.reservation.stock.StockRedisRepository;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -53,9 +51,6 @@ class BookingPaymentFailureTest {
     private PaymentRepository paymentRepository;
 
     @Autowired
-    private StockRedisRepository stockRedisRepository;
-
-    @Autowired
     private QueueService queueService;
 
     @Autowired
@@ -78,7 +73,6 @@ class BookingPaymentFailureTest {
         Product product = createProduct(10);
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 10);
         queueService.enter(product.getId(), user.getId());
 
         doThrow(new PgException(PgErrorCode.INVALID_REJECT_CARD))
@@ -95,17 +89,15 @@ class BookingPaymentFailureTest {
         Product updatedProduct = productRepository.findById(product.getId()).get();
         assertAll(
                 () -> assertThat(updatedBooking.getStatus()).isEqualTo(BookingStatus.CANCELLED),
-                () -> assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10"),
                 () -> assertThat(updatedProduct.getStock().getQuantity()).isEqualTo(10)
         );
     }
 
     @Test
-    void PG사_일시장애시_재시도_후_최종_실패하면_CANCELLED_상태로_변경되고_재고가_롤백된다() {
+    void PG사_일시장애시_재시도_후_최종_실패하면_CANCELLED_상태로_변경된다() {
         Product product = createProduct(10);
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 10);
         queueService.enter(product.getId(), user.getId());
 
         doThrow(new PgException(PgErrorCode.PROVIDER_ERROR))
@@ -119,10 +111,7 @@ class BookingPaymentFailureTest {
                 .isInstanceOf(PgException.class);
 
         Booking updatedBooking = bookingRepository.findById(booking.getId()).get();
-        assertAll(
-                () -> assertThat(updatedBooking.getStatus()).isEqualTo(BookingStatus.CANCELLED),
-                () -> assertThat(redisTemplate.opsForValue().get(StockKeys.stock(product.getId()))).isEqualTo("10")
-        );
+        assertThat(updatedBooking.getStatus()).isEqualTo(BookingStatus.CANCELLED);
     }
 
     @Test
@@ -130,7 +119,6 @@ class BookingPaymentFailureTest {
         Product product = createProduct(10);
         User user = createUser(100000L);
         Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
-        stockRedisRepository.set(product.getId(), 10);
         queueService.enter(product.getId(), user.getId());
 
         doThrow(new PgException(PgErrorCode.PROVIDER_ERROR))

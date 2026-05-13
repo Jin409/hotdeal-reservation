@@ -47,4 +47,5 @@ public class Product {
     public void decreaseStock() {
         this.stock = stock.decrease();
     }
+
 }
