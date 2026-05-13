@@ -16,12 +16,14 @@ class QueueServiceTest extends ServiceTest {
     private QueueService queueService;
 
     @Autowired
+    private QueueRedisRepository queueRedisRepository;
+
+    @Autowired
     private StringRedisTemplate redisTemplate;
 
     @AfterEach
     void clearRedis() {
-        redisTemplate.delete(QueueKeys.queue(1L));
-        redisTemplate.delete(QueueKeys.entered(1L));
+        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushAll();
     }
 
     @Test
@@ -53,5 +55,63 @@ class QueueServiceTest extends ServiceTest {
 
         Long size = redisTemplate.opsForList().size(QueueKeys.queue(1L));
         assertThat(size).isEqualTo(1L);
+    }
+
+    @Test
+    void 첫번째_진입자는_즉시_ready_상태가_된다() {
+        queueService.enter(1L, 10L);
+
+        assertThat(queueRedisRepository.isReady(1L, 10L)).isTrue();
+    }
+
+    @Test
+    void 두번째_진입자는_ready_상태가_아니다() {
+        queueService.enter(1L, 10L);
+        queueService.enter(1L, 20L);
+
+        assertThat(queueRedisRepository.isReady(1L, 20L)).isFalse();
+    }
+
+    @Test
+    void 첫번째가_떠나면_두번째가_ready_상태가_된다() {
+        queueService.enter(1L, 10L);
+        queueService.enter(1L, 20L);
+
+        queueService.leave(1L, 10L);
+
+        assertAll(
+                () -> assertThat(queueRedisRepository.isReady(1L, 10L)).isFalse(),
+                () -> assertThat(queueRedisRepository.isReady(1L, 20L)).isTrue()
+        );
+    }
+
+    @Test
+    void ready_만료된_첫번째_사용자가_대기열에서_제거되고_다음_사람이_승격된다() {
+        queueService.enter(1L, 10L);
+        queueService.enter(1L, 20L);
+
+        // ready 키 수동 삭제 (TTL 만료 시뮬레이션)
+        queueRedisRepository.removeReady(1L, 10L);
+
+        queueService.evictReadyExpiredUser(1L);
+
+        assertAll(
+                () -> assertThat(queueRedisRepository.getRank(1L, 10L)).isNull(),
+                () -> assertThat(queueRedisRepository.getRank(1L, 20L)).isEqualTo(1L),
+                () -> assertThat(queueRedisRepository.isReady(1L, 20L)).isTrue()
+        );
+    }
+
+    @Test
+    void ready가_유효한_첫번째_사용자는_제거되지_않는다() {
+        queueService.enter(1L, 10L);
+        queueService.enter(1L, 20L);
+
+        queueService.evictReadyExpiredUser(1L);
+
+        assertAll(
+                () -> assertThat(queueRedisRepository.getRank(1L, 10L)).isEqualTo(1L),
+                () -> assertThat(queueRedisRepository.getRank(1L, 20L)).isEqualTo(2L)
+        );
     }
 }
