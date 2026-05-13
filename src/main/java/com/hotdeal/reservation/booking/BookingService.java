@@ -23,7 +23,7 @@ public class BookingService {
     private final PaymentService paymentService;
     private final StockService stockService;
     private final QueueService queueService;
-    private final BookingCommandService bookingCommandService;
+    private final BookingCompensationService bookingCommandService;
 
     @Transactional
     public BookingResponse book(Long userId, Long bookingId, BookingRequest request) {
