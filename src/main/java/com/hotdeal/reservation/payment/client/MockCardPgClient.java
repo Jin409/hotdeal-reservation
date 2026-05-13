@@ -8,4 +8,8 @@ public class MockCardPgClient implements CardPgClient {
     @Override
     public void charge(String idempotencyKey, long amount) {
     }
+
+    @Override
+    public void cancel(String idempotencyKey) {
+    }
 }

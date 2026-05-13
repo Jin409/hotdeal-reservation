@@ -34,6 +34,11 @@ public class YPayProcessor implements PaymentProcessor {
     }
 
     @Override
+    public void cancel(String idempotencyKey) {
+        yPayPgClient.cancel(idempotencyKey);
+    }
+
+    @Override
     public PaymentType supportedType() {
         return PaymentType.YPAY;
     }

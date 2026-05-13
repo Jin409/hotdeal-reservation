@@ -43,6 +43,17 @@ public class PaymentService {
         payment.succeed();
     }
 
+    public void cancelExternalPayments(Long bookingId, List<PaymentMethodRequest> methods) {
+        PaymentMethods paymentMethods = new PaymentMethods(methods);
+        String pgIdempotencyKey = generatePgIdempotencyKey(bookingId);
+
+        paymentMethods.externalMethods().forEach(pm -> {
+            PaymentType type = PaymentType.valueOf(pm.type());
+            PaymentProcessor processor = processorFactory.getProcessor(type);
+            processor.cancel(pgIdempotencyKey);
+        });
+    }
+
     private void processByPaymentMethod(User user, PaymentMethodRequest pm, String pgIdempotencyKey) {
         PaymentType type = PaymentType.valueOf(pm.type());
         PaymentProcessor processor = processorFactory.getProcessor(type);
