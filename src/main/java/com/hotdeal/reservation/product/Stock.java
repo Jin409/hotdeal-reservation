@@ -32,4 +32,8 @@ public class Stock {
         }
         return new Stock(this.quantity - 1);
     }
+
+    public Stock increase() {
+        return new Stock(this.quantity + 1);
+    }
 }

@@ -48,4 +48,7 @@ public class Product {
         this.stock = stock.decrease();
     }
 
+    public void increaseStock() {
+        this.stock = stock.increase();
+    }
 }
