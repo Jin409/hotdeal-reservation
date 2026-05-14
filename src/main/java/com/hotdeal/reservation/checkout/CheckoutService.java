@@ -3,7 +3,6 @@ package com.hotdeal.reservation.checkout;
 import com.hotdeal.reservation.booking.Booking;
 import com.hotdeal.reservation.booking.BookingRepository;
 import com.hotdeal.reservation.common.EntityUtils;
-import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.common.idempotency.IdempotencyStore;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.queue.QueueService;
@@ -26,9 +25,7 @@ public class CheckoutService {
         Product product = entityUtils.getEntity(productId, Product.class);
         User user = entityUtils.getEntity(userId, User.class);
 
-        if (product.getStock().isEmpty()) {
-            throw new BadRequestException("재고가 없습니다.");
-        }
+        product.validateInStock();
 
         Long rank = queueService.enter(productId, userId);
         String idempotencyKey = idempotencyStore.issue(productId + ":" + userId);

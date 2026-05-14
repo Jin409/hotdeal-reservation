@@ -44,6 +44,12 @@ public class Product {
         this.createdAt = LocalDateTime.now();
     }
 
+    public void validateInStock() {
+        if (stock.isEmpty()) {
+            throw new IllegalStateException("재고가 없습니다.");
+        }
+    }
+
     public void decreaseStock() {
         this.stock = stock.decrease();
     }

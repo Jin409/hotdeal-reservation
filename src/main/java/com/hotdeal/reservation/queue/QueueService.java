@@ -17,26 +17,28 @@ public class QueueService {
 
     public Long enter(Long productId, Long userId) {
         try {
-            boolean entered = queueRedisRepository.tryEnter(productId, userId);
-            if (!entered) {
-                throw new DuplicateEntryException("이미 대기열에 진입한 사용자입니다.");
-            }
-
-            queueRedisRepository.addToQueue(productId, userId);
-            queueRedisRepository.addActiveProduct(productId);
-            Long rank = queueRedisRepository.getRank(productId, userId);
-
-            if (rank != null && rank == FIRST_IN_LINE) {
-                queueRedisRepository.markReady(productId, userId);
-            }
-
-            return rank;
+            return doEnter(productId, userId);
         } catch (DuplicateEntryException e) {
             throw e;
         } catch (Exception e) {
             log.warn("대기열 진입에 실패하여 건너뜁니다.", e);
             return null;
         }
+    }
+
+    private Long doEnter(Long productId, Long userId) {
+        boolean entered = queueRedisRepository.tryEnter(productId, userId);
+        if (!entered) {
+            throw new DuplicateEntryException("이미 대기열에 진입한 사용자입니다.");
+        }
+
+        queueRedisRepository.addToQueue(productId, userId);
+        queueRedisRepository.addActiveProduct(productId);
+        Long rank = queueRedisRepository.getRank(productId, userId);
+
+        markReadyIfFirstInLine(productId, userId, rank);
+
+        return rank;
     }
 
     public void validateIsReady(Long productId, Long userId) {
@@ -81,6 +83,12 @@ public class QueueService {
             leave(productId, firstUserId);
         } catch (Exception e) {
             log.warn("만료된 대기열 사용자 제거에 실패했습니다.", e);
+        }
+    }
+
+    private void markReadyIfFirstInLine(Long productId, Long userId, Long rank) {
+        if (rank != null && rank == FIRST_IN_LINE) {
+            queueRedisRepository.markReady(productId, userId);
         }
     }
 

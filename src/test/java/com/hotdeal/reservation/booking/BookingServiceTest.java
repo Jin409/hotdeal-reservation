@@ -92,7 +92,7 @@ class BookingServiceTest extends ServiceTest {
         ));
 
         assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
-                .isInstanceOf(BadRequestException.class);
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
