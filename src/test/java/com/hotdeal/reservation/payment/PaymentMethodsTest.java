@@ -1,6 +1,6 @@
 package com.hotdeal.reservation.payment;
 
-import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
+import com.hotdeal.reservation.payment.PaymentMethodRequest;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

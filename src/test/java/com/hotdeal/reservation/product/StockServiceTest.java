@@ -1,9 +1,7 @@
-package com.hotdeal.reservation.stock;
+package com.hotdeal.reservation.product;
 
 import com.hotdeal.reservation.common.ServiceTest;
 import com.hotdeal.reservation.common.exception.BadRequestException;
-import com.hotdeal.reservation.product.Product;
-import com.hotdeal.reservation.product.ProductRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 

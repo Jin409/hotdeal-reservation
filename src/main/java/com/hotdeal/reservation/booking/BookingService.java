@@ -6,7 +6,7 @@ import com.hotdeal.reservation.common.EntityUtils;
 import com.hotdeal.reservation.payment.PaymentService;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.queue.QueueService;
-import com.hotdeal.reservation.stock.StockService;
+import com.hotdeal.reservation.product.StockService;
 import com.hotdeal.reservation.user.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

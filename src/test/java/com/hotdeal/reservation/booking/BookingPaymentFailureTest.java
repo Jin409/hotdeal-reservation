@@ -1,7 +1,7 @@
 package com.hotdeal.reservation.booking;
 
 import com.hotdeal.reservation.booking.dto.BookingRequest;
-import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
+import com.hotdeal.reservation.payment.PaymentMethodRequest;
 import com.hotdeal.reservation.common.EmbeddedRedisConfig;
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentRepository;

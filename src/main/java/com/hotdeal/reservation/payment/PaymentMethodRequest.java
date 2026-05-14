@@ -1,4 +1,4 @@
-package com.hotdeal.reservation.booking.dto;
+package com.hotdeal.reservation.payment;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;

@@ -1,8 +1,6 @@
-package com.hotdeal.reservation.stock;
+package com.hotdeal.reservation.product;
 
 import com.hotdeal.reservation.common.exception.BadRequestException;
-import com.hotdeal.reservation.product.Product;
-import com.hotdeal.reservation.product.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
