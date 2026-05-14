@@ -59,7 +59,7 @@ class BookingQueueFailureTest {
 
         given(queueRedisRepository.isReady(anyLong(), anyLong())).willReturn(true);
         willThrow(new RedisConnectionFailureException("Redis 연결 실패"))
-                .given(queueRedisRepository).popFirst(anyLong());
+                .given(queueRedisRepository).removeFromQueue(anyLong(), anyLong());
 
         BookingRequest request = new BookingRequest(product.getId(), List.of(
                 new PaymentMethodRequest("CREDIT_CARD", 100000)

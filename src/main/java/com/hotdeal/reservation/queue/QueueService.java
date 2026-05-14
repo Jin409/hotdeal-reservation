@@ -55,7 +55,7 @@ public class QueueService {
 
     public void leave(Long productId, Long userId) {
         try {
-            queueRedisRepository.popFirst(productId);
+            queueRedisRepository.removeFromQueue(productId, userId);
             queueRedisRepository.removeEntry(productId, userId);
             queueRedisRepository.removeReady(productId, userId);
             markNextUserReady(productId);
