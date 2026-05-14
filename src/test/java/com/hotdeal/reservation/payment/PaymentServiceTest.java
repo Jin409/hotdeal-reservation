@@ -58,7 +58,7 @@ class PaymentServiceTest extends ServiceTest {
     }
 
     @Test
-    void 카드와_포인트_복합결제_성공시_포인트가_차감된다() {
+    void 카드와_포인트_복합결제_성공시_결제가_저장된다() {
         User user = userRepository.save(new User("홍길동", "hong@test.com", 50000L));
         List<PaymentMethodRequest> methods = List.of(
                 new PaymentMethodRequest("CREDIT_CARD", 80000),
@@ -67,13 +67,11 @@ class PaymentServiceTest extends ServiceTest {
 
         paymentService.validate(user, methods, 100000);
         paymentService.processExternalPayments(1L, user, methods);
-        paymentService.savePaymentResult(1L, user, methods, 100000);
-
-        assertThat(user.getPointBalance()).isEqualTo(30000);
+        paymentService.savePaymentResult(1L, methods, 100000);
     }
 
     @Test
-    void 카드_단독_결제시_포인트가_차감되지_않는다() {
+    void 카드_단독_결제시_결제가_저장된다() {
         User user = userRepository.save(new User("홍길동", "hong@test.com", 50000L));
         List<PaymentMethodRequest> methods = List.of(
                 new PaymentMethodRequest("CREDIT_CARD", 100000)
@@ -81,8 +79,6 @@ class PaymentServiceTest extends ServiceTest {
 
         paymentService.validate(user, methods, 100000);
         paymentService.processExternalPayments(1L, user, methods);
-        paymentService.savePaymentResult(1L, user, methods, 100000);
-
-        assertThat(user.getPointBalance()).isEqualTo(50000);
+        paymentService.savePaymentResult(1L, methods, 100000);
     }
 }

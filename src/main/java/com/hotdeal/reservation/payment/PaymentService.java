@@ -1,6 +1,5 @@
 package com.hotdeal.reservation.payment;
 
-import com.hotdeal.reservation.payment.PaymentMethodRequest;
 import com.hotdeal.reservation.payment.processor.PaymentProcessor;
 import com.hotdeal.reservation.payment.processor.PaymentProcessorFactory;
 import com.hotdeal.reservation.user.User;
@@ -32,13 +31,10 @@ public class PaymentService {
         });
     }
 
-    public void savePaymentResult(Long bookingId, User user, List<PaymentMethodRequest> methods,
+    public void savePaymentResult(Long bookingId, List<PaymentMethodRequest> methods,
                                   long productPrice) {
-        PaymentMethods paymentMethods = new PaymentMethods(methods);
         Payment payment = paymentRepository.save(new Payment(bookingId, productPrice));
         savePaymentItems(payment.getId(), methods);
-
-        user.usePoints(paymentMethods.pointAmount());
         payment.succeed();
     }
 
