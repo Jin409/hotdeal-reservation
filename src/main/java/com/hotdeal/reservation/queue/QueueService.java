@@ -22,6 +22,7 @@ public class QueueService {
             }
 
             queueRedisRepository.addToQueue(productId, userId);
+            queueRedisRepository.addActiveProduct(productId);
             Long rank = queueRedisRepository.getRank(productId, userId);
 
             if (rank != null && rank == FIRST_IN_LINE) {
@@ -55,7 +56,7 @@ public class QueueService {
 
     public void leave(Long productId, Long userId) {
         try {
-            queueRedisRepository.popFirst(productId);
+            queueRedisRepository.removeFromQueue(productId, userId);
             queueRedisRepository.removeEntry(productId, userId);
             queueRedisRepository.removeReady(productId, userId);
             markNextUserReady(productId);
@@ -86,6 +87,8 @@ public class QueueService {
         Long nextUserId = queueRedisRepository.getFirstUserId(productId);
         if (nextUserId != null) {
             queueRedisRepository.markReady(productId, nextUserId);
+            return;
         }
+        queueRedisRepository.removeActiveProduct(productId);
     }
 }

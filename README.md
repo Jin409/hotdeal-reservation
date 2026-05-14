@@ -255,7 +255,7 @@ sequenceDiagram
         폴링 ->> Redis: 유저2 ready 마킹 (TTL 3분)
         폴링 -->> 유저2: READY
     else 스케줄러 감지 (proactive, 5초 간격)
-        스케줄러 ->> Redis: 대기열 있는 상품 조회
+        스케줄러 ->> Redis: active-products Set에서 활성 상품 조회
         스케줄러 ->> Redis: rank 1의 ready 키 확인
         Redis -->> 스케줄러: 없음 (만료됨)
         스케줄러 ->> Redis: 유저1 대기열에서 제거
@@ -376,6 +376,7 @@ erDiagram
 | `queue:product:{productId}`                 | List   | 없음  | 대기열 순서 관리                        |
 | `queue:entered:{productId}`                 | Set    | 없음  | 중복 진입 방지                         |
 | `queue:ready:{productId}:{userId}`          | String | 3분  | rank 1 결제 가능 상태                  |
+| `queue:active-products`                     | Set    | 없음  | 대기열이 존재하는 상품 ID 목록              |
 | `idempotency:{key}`                         | String | 10분 | 클라이언트 멱등키 (PROCESSING → 응답 JSON) |
 | `idempotency:checkout:{productId}:{userId}` | String | 10분 | 주문서 진입 시 멱등키 발급 저장               |
 

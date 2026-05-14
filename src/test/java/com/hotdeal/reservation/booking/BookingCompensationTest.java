@@ -29,6 +29,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.doThrow;
 import static org.mockito.Mockito.verify;
 
+import org.mockito.ArgumentCaptor;
+
 @SpringBootTest
 @Import(EmbeddedRedisConfig.class)
 class BookingCompensationTest {
@@ -87,6 +89,31 @@ class BookingCompensationTest {
                 () -> assertThat(updatedProduct.getStock().getQuantity()).isEqualTo(10),
                 () -> verify(cardPgClient).cancel(anyString())
         );
+    }
+
+    @Test
+    void PG_결제와_취소에_동일한_멱등성_키가_전달된다() {
+        Product product = createProduct(10);
+        User user = createUser(100000L);
+        Booking booking = bookingRepository.save(Booking.waiting(user.getId(), product.getId()));
+        queueService.enter(product.getId(), user.getId());
+
+        doThrow(new RuntimeException("DB 저장 실패"))
+                .when(bookingTransactionService).complete(anyLong(), anyLong(), any(), anyLong());
+
+        BookingRequest request = new BookingRequest(product.getId(), List.of(
+                new PaymentMethodRequest("CREDIT_CARD", 100000)
+        ));
+
+        assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
+                .isInstanceOf(RuntimeException.class);
+
+        ArgumentCaptor<String> chargeKeyCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> cancelKeyCaptor = ArgumentCaptor.forClass(String.class);
+        verify(cardPgClient).charge(chargeKeyCaptor.capture(), anyLong());
+        verify(cardPgClient).cancel(cancelKeyCaptor.capture());
+
+        assertThat(chargeKeyCaptor.getValue()).isEqualTo(cancelKeyCaptor.getValue());
     }
 
     @Test

@@ -103,6 +103,38 @@ class QueueServiceTest extends ServiceTest {
     }
 
     @Test
+    void leave가_동시에_호출되어도_다른_사용자가_제거되지_않는다() {
+        queueService.enter(1L, 10L);
+        queueService.enter(1L, 20L);
+
+        queueService.leave(1L, 10L);
+        queueService.leave(1L, 10L);
+
+        assertAll(
+                () -> assertThat(queueRedisRepository.getRank(1L, 20L)).isEqualTo(1L),
+                () -> assertThat(queueRedisRepository.isReady(1L, 20L)).isTrue()
+        );
+    }
+
+    @Test
+    void 대기열에_진입하면_active_products에_추가된다() {
+        queueService.enter(1L, 10L);
+
+        assertThat(queueRedisRepository.getActiveProductIds()).contains(1L);
+    }
+
+    @Test
+    void 모든_사용자가_떠나면_active_products에서_제거된다() {
+        queueService.enter(1L, 10L);
+        queueService.enter(1L, 20L);
+
+        queueService.leave(1L, 10L);
+        queueService.leave(1L, 20L);
+
+        assertThat(queueRedisRepository.getActiveProductIds()).doesNotContain(1L);
+    }
+
+    @Test
     void ready가_유효한_첫번째_사용자는_제거되지_않는다() {
         queueService.enter(1L, 10L);
         queueService.enter(1L, 20L);

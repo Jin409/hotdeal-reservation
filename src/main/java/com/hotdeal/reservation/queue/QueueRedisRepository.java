@@ -30,8 +30,8 @@ public class QueueRedisRepository {
         redisTemplate.opsForSet().remove(QueueKeys.entered(productId), userId.toString());
     }
 
-    public void popFirst(Long productId) {
-        redisTemplate.opsForList().leftPop(QueueKeys.queue(productId));
+    public void removeFromQueue(Long productId, Long userId) {
+        redisTemplate.opsForList().remove(QueueKeys.queue(productId), 1, userId.toString());
     }
 
     public Long getRank(Long productId, Long userId) {
@@ -61,13 +61,21 @@ public class QueueRedisRepository {
         return userId != null ? Long.parseLong(userId) : null;
     }
 
+    public void addActiveProduct(Long productId) {
+        redisTemplate.opsForSet().add(QueueKeys.activeProducts(), productId.toString());
+    }
+
+    public void removeActiveProduct(Long productId) {
+        redisTemplate.opsForSet().remove(QueueKeys.activeProducts(), productId.toString());
+    }
+
     public Set<Long> getActiveProductIds() {
-        Set<String> keys = redisTemplate.keys(QueueKeys.queuePattern());
-        if (keys.isEmpty()) {
+        Set<String> members = redisTemplate.opsForSet().members(QueueKeys.activeProducts());
+        if (members == null || members.isEmpty()) {
             return Collections.emptySet();
         }
-        return keys.stream()
-                .map(QueueKeys::extractProductId)
+        return members.stream()
+                .map(Long::parseLong)
                 .collect(Collectors.toSet());
     }
 }
