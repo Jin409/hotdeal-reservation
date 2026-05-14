@@ -255,7 +255,7 @@ sequenceDiagram
         폴링 ->> Redis: 유저2 ready 마킹 (TTL 3분)
         폴링 -->> 유저2: READY
     else 스케줄러 감지 (proactive, 5초 간격)
-        스케줄러 ->> Redis: 대기열 있는 상품 조회
+        스케줄러 ->> Redis: active-products Set에서 활성 상품 조회
         스케줄러 ->> Redis: rank 1의 ready 키 확인
         Redis -->> 스케줄러: 없음 (만료됨)
         스케줄러 ->> Redis: 유저1 대기열에서 제거
