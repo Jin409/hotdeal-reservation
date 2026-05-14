@@ -1,7 +1,6 @@
 package com.hotdeal.reservation.product;
 
 import com.hotdeal.reservation.common.ServiceTest;
-import com.hotdeal.reservation.common.exception.BadRequestException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -37,6 +36,6 @@ class StockServiceTest extends ServiceTest {
                         LocalDateTime.now(), LocalDateTime.now().plusDays(1)));
 
         assertThatThrownBy(() -> stockService.decrease(product.getId()))
-                .isInstanceOf(BadRequestException.class);
+                .isInstanceOf(IllegalStateException.class);
     }
 }

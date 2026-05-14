@@ -3,7 +3,6 @@ package com.hotdeal.reservation.booking;
 import com.hotdeal.reservation.booking.dto.BookingRequest;
 import com.hotdeal.reservation.payment.PaymentMethodRequest;
 import com.hotdeal.reservation.common.EmbeddedRedisConfig;
-import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.queue.QueueRedisRepository;
@@ -106,7 +105,7 @@ class BookingRedisFallbackTest {
         ));
 
         assertThatThrownBy(() -> bookingService.book(user.getId(), booking.getId(), request))
-                .isInstanceOf(BadRequestException.class);
+                .isInstanceOf(IllegalStateException.class);
     }
 
     private Product createProduct(int stock) {

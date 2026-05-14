@@ -2,7 +2,6 @@ package com.hotdeal.reservation.checkout;
 
 import com.hotdeal.reservation.common.ServiceTest;
 import com.hotdeal.reservation.common.exception.NotFoundException;
-import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.common.exception.DuplicateEntryException;
@@ -87,7 +86,7 @@ class CheckoutServiceTest extends ServiceTest {
         User user = userRepository.save(new User("홍길동", "hong@test.com", 50000L));
 
         assertThatThrownBy(() -> checkoutService.checkout(product.getId(), user.getId()))
-                .isInstanceOf(BadRequestException.class);
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
