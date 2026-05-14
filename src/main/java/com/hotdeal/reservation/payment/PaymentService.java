@@ -1,6 +1,6 @@
 package com.hotdeal.reservation.payment;
 
-import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
+import com.hotdeal.reservation.payment.PaymentMethodRequest;
 import com.hotdeal.reservation.payment.processor.PaymentProcessor;
 import com.hotdeal.reservation.payment.processor.PaymentProcessorFactory;
 import com.hotdeal.reservation.user.User;

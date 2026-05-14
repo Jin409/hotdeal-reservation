@@ -1,6 +1,7 @@
 package com.hotdeal.reservation.queue;
 
 import com.hotdeal.reservation.common.exception.BadRequestException;
+import com.hotdeal.reservation.common.exception.DuplicateEntryException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

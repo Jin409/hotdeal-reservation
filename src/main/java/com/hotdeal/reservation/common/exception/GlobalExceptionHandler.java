@@ -1,7 +1,5 @@
 package com.hotdeal.reservation.common.exception;
 
-import com.hotdeal.reservation.payment.client.PgException;
-import com.hotdeal.reservation.queue.DuplicateEntryException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

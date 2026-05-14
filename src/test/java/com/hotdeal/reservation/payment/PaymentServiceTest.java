@@ -1,6 +1,6 @@
 package com.hotdeal.reservation.payment;
 
-import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
+import com.hotdeal.reservation.payment.PaymentMethodRequest;
 import com.hotdeal.reservation.common.ServiceTest;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;

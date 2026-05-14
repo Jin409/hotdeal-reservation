@@ -1,13 +1,13 @@
 package com.hotdeal.reservation.booking;
 
 import com.hotdeal.reservation.booking.dto.BookingRequest;
-import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
+import com.hotdeal.reservation.payment.PaymentMethodRequest;
 import com.hotdeal.reservation.common.EmbeddedRedisConfig;
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentRepository;
 import com.hotdeal.reservation.payment.client.CardPgClient;
-import com.hotdeal.reservation.payment.client.PgErrorCode;
-import com.hotdeal.reservation.payment.client.PgException;
+import com.hotdeal.reservation.common.exception.PgErrorCode;
+import com.hotdeal.reservation.common.exception.PgException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.queue.QueueService;

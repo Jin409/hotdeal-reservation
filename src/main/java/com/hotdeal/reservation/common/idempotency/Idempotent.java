@@ -1,4 +1,4 @@
-package com.hotdeal.reservation.idempotency;
+package com.hotdeal.reservation.common.idempotency;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

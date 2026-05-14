@@ -1,9 +1,9 @@
 package com.hotdeal.reservation.booking;
 
 import com.hotdeal.reservation.booking.dto.BookingRequest;
-import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
+import com.hotdeal.reservation.payment.PaymentMethodRequest;
 import com.hotdeal.reservation.common.AcceptanceTest;
-import com.hotdeal.reservation.idempotency.IdempotencyStore;
+import com.hotdeal.reservation.common.idempotency.IdempotencyStore;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
 import com.hotdeal.reservation.queue.QueueService;

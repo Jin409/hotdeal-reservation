@@ -1,6 +1,7 @@
 package com.hotdeal.reservation.queue;
 
 import com.hotdeal.reservation.common.ServiceTest;
+import com.hotdeal.reservation.common.exception.DuplicateEntryException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

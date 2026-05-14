@@ -4,7 +4,7 @@ import com.hotdeal.reservation.booking.Booking;
 import com.hotdeal.reservation.booking.BookingRepository;
 import com.hotdeal.reservation.common.EntityUtils;
 import com.hotdeal.reservation.common.exception.BadRequestException;
-import com.hotdeal.reservation.idempotency.IdempotencyStore;
+import com.hotdeal.reservation.common.idempotency.IdempotencyStore;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.queue.QueueService;
 import com.hotdeal.reservation.user.User;

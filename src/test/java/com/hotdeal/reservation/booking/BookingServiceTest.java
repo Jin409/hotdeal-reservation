@@ -2,7 +2,7 @@ package com.hotdeal.reservation.booking;
 
 import com.hotdeal.reservation.booking.dto.BookingRequest;
 import com.hotdeal.reservation.booking.dto.BookingResponse;
-import com.hotdeal.reservation.booking.dto.PaymentMethodRequest;
+import com.hotdeal.reservation.payment.PaymentMethodRequest;
 import com.hotdeal.reservation.common.ServiceTest;
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentItemRepository;

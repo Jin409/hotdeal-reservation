@@ -1,6 +1,7 @@
 package com.hotdeal.reservation.idempotency;
 
 import com.hotdeal.reservation.common.ServiceTest;
+import com.hotdeal.reservation.common.idempotency.IdempotencyStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 

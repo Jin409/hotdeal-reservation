@@ -1,4 +1,4 @@
-package com.hotdeal.reservation.queue;
+package com.hotdeal.reservation.common.exception;
 
 public class DuplicateEntryException extends RuntimeException {
 

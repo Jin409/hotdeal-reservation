@@ -1,4 +1,4 @@
-package com.hotdeal.reservation.payment.client;
+package com.hotdeal.reservation.common.exception;
 
 import lombok.Getter;
 

@@ -3,7 +3,7 @@ package com.hotdeal.reservation.payment.processor;
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.payment.PaymentType;
 import com.hotdeal.reservation.payment.client.CardPgClient;
-import com.hotdeal.reservation.payment.client.PgException;
+import com.hotdeal.reservation.common.exception.PgException;
 import com.hotdeal.reservation.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.retry.annotation.Backoff;

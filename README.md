@@ -35,15 +35,15 @@ graph TD
 com.hotdeal.reservation
 ├── booking/          예약 도메인 (Booking, BookingService, Controller)
 ├── checkout/         주문서 진입 (CheckoutService, Controller)
-├── common/           공통 유틸 (EntityUtils, 예외 클래스)
-├── idempotency/      멱등성 처리 (AOP, IdempotencyStore)
+├── common/           공통 유틸 및 횡단 관심사
+│   ├── exception/    예외 클래스 (PG, 대기열 포함)
+│   └── idempotency/  멱등성 처리 (AOP, IdempotencyStore)
 ├── payment/          결제 도메인
 │   ├── client/       PG사 클라이언트 (인터페이스 + Mock)
 │   └── processor/    결제 수단별 전략 패턴
-├── product/          상품 도메인
+├── product/          상품 도메인 + 재고 관리 (DB 비관적 락)
 ├── queue/            대기열 관리
 │   └── status/       대기열 상태 조회 (폴링)
-├── stock/            재고 관리 (DB 비관적 락)
 └── user/             사용자 도메인
 ```
 
