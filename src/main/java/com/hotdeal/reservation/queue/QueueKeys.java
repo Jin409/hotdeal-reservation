@@ -5,6 +5,7 @@ public class QueueKeys {
     private static final String QUEUE_PREFIX = "queue:product:";
     private static final String ENTERED_PREFIX = "queue:entered:";
     private static final String READY_PREFIX = "queue:ready:";
+    private static final String ACTIVE_PRODUCTS = "queue:active-products";
 
     public static String queue(Long productId) {
         return QUEUE_PREFIX + productId;
@@ -18,11 +19,7 @@ public class QueueKeys {
         return READY_PREFIX + productId + ":" + userId;
     }
 
-    public static String queuePattern() {
-        return QUEUE_PREFIX + "*";
-    }
-
-    public static Long extractProductId(String queueKey) {
-        return Long.parseLong(queueKey.replace(QUEUE_PREFIX, ""));
+    public static String activeProducts() {
+        return ACTIVE_PRODUCTS;
     }
 }
