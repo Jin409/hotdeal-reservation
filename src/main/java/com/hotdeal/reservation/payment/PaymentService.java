@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -68,6 +67,6 @@ public class PaymentService {
     }
 
     private String generatePgIdempotencyKey(Long bookingId) {
-        return "pg:" + bookingId + ":" + UUID.randomUUID();
+        return "pg:" + bookingId;
     }
 }
