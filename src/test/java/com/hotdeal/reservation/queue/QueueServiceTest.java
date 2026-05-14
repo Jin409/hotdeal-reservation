@@ -103,6 +103,20 @@ class QueueServiceTest extends ServiceTest {
     }
 
     @Test
+    void leave가_동시에_호출되어도_다른_사용자가_제거되지_않는다() {
+        queueService.enter(1L, 10L);
+        queueService.enter(1L, 20L);
+
+        queueService.leave(1L, 10L);
+        queueService.leave(1L, 10L);
+
+        assertAll(
+                () -> assertThat(queueRedisRepository.getRank(1L, 20L)).isEqualTo(1L),
+                () -> assertThat(queueRedisRepository.isReady(1L, 20L)).isTrue()
+        );
+    }
+
+    @Test
     void ready가_유효한_첫번째_사용자는_제거되지_않는다() {
         queueService.enter(1L, 10L);
         queueService.enter(1L, 20L);

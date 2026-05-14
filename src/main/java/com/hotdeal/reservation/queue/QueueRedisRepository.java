@@ -30,8 +30,8 @@ public class QueueRedisRepository {
         redisTemplate.opsForSet().remove(QueueKeys.entered(productId), userId.toString());
     }
 
-    public void popFirst(Long productId) {
-        redisTemplate.opsForList().leftPop(QueueKeys.queue(productId));
+    public void removeFromQueue(Long productId, Long userId) {
+        redisTemplate.opsForList().remove(QueueKeys.queue(productId), 1, userId.toString());
     }
 
     public Long getRank(Long productId, Long userId) {
