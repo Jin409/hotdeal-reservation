@@ -5,7 +5,7 @@ import com.hotdeal.reservation.common.exception.NotFoundException;
 import com.hotdeal.reservation.common.exception.BadRequestException;
 import com.hotdeal.reservation.product.Product;
 import com.hotdeal.reservation.product.ProductRepository;
-import com.hotdeal.reservation.queue.DuplicateEntryException;
+import com.hotdeal.reservation.common.exception.DuplicateEntryException;
 import com.hotdeal.reservation.queue.QueueKeys;
 import com.hotdeal.reservation.user.User;
 import com.hotdeal.reservation.user.UserRepository;
